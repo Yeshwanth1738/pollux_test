@@ -1,0 +1,238 @@
+/*
+ * Copyright 2012=2015 Freescale Semiconductor, Inc.
+ * Copyright 2011 Linaro Ltd.
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/dts-v1/;
+
+#define OV8825_MIPI_CAMERA 0
+
+#include "imx6q.dtsi"
+#include "imx6qdlmicro-esomimx6-re-test.dtsi"
+#include "imx6micro-ankaa-esomimx6.dtsi"
+
+/ {
+	model = "ESOMIMX6 QUAD BOARD";
+
+#if OV8825_MIPI_CAMERA
+	compatible = "fsl,imx6q-ankaa-ov8825", "fsl,imx6q";
+#else
+	compatible = "fsl,imx6q-ankaa", "fsl,imx6q";
+#endif
+
+	v4l2_cap_2 {
+		compatible = "fsl,imx6q-v4l2-capture";
+		ipu_id = <1>;
+		csi_id = <1>;
+		mclk_source = <0>;
+		status = "okay";
+	};
+
+#if OV8825_MIPI_CAMERA
+	v4l2_cap_1 {
+		ipu_id = <1>;
+	};
+
+	v4l2_cap_2 {
+		status = "disabled";
+	};
+#endif
+
+};
+
+&ldb {
+	lvds-channel@0 {
+		crtc = "ipu2-di0";
+	};
+
+	lvds-channel@1 {
+		crtc = "ipu2-di1";
+	};
+};
+
+&mxcfb1 {
+	status = "okay";
+};
+
+&mxcfb2 {
+	status = "okay";
+};
+
+&mxcfb3 {
+	status = "okay";
+};
+
+&mxcfb4 {
+	status = "okay";
+};
+
+&sata {
+	status = "okay";
+};
+
+&i2c1 {
+ 	/* ov5640 parallel camera 1 */
+	ov5640_parallel_1: ov5640@3c {
+		compatible = "ovti,ov564x";
+		reg = <0x3c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu1_2>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&vgen4_reg>; /* 1.8v */ /* Not sure of these three values */
+		AVDD-supply = <&vgen3_reg>;  /* 2.8v, on rev C board is VGEN3,
+						on rev B board is VGEN5 */
+		DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
+		/* If proper GPIOs are given here, camera modules with proper GPIOs are not working
+		   So, GPIOs are not given proper here. TODO: Given proper GPIOs and make camera modules
+		   with porper GPIOs to work here
+		*/
+		pwn-gpios = <&gpio5 14 0>; /* eSOMiMX6*/
+		rst-gpios = <&gpio5 9 1>;  /* eSOMiMX6 */
+		ipu_id = <0>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+	};
+};
+
+&i2c2 {
+	ov5640: ov5640@3e {
+		compatible = "ovti,ov5640_parallel_2";
+		reg =<0x3e>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ov5640_csi1>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&vgen4_reg>; /* 1.8v */
+		AVDD-supply = <&vgen3_reg>;  /* 2.8v, on rev C board is VGEN3,
+						on rev B board is VGEN5 */
+		DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
+		/*pwn-gpios = <&gpio3 8 1>;*/   /* active high: EIM_DA8 */
+		/*rst-gpios = <&gpio3 9 0>;*/   /* active low: EIM_DA9 */
+		csi_id = <1>;
+		ipu_id = <1>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+		status = "okay";
+	};
+#if 0
+
+	mt9p031: mt9p031@48 {
+		compatible = "mt9p031m_2";
+		reg = <0x48>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ov5640_csi1>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&vgen4_reg>; /* 1.8v */
+		AVDD-supply = <&vgen3_reg>;  /* 2.8v, on rev C board is VGEN3,
+						on rev B board is VGEN5 */
+		DVDD-supply = <&vgen4_reg>;  /* 1.8v*/
+		pwn-gpios = <&gpio3 8 1>;   /* active high: EIM_DA8 */
+		rst-gpios = <&gpio3 9 0>;   /* active low: EIM_DA9 */
+		csi_id = <1>;
+		ipu_id = <1>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+		status = "okay";
+	};
+
+	/* ov10633 parallel camera 1 */
+	ov10633_parallel_2: ov10633@30 {
+		compatible = "ovti,ov10633_parallel_2";
+		reg = <0x30>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ov5640_csi1>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&vgen4_reg>; /* 1.8v */ /* Not sure of these three values */
+		AVDD-supply = <&vgen3_reg>;  /* 2.8v, on rev C board is VGEN3,
+						on rev B board is VGEN5 */
+		DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
+		pwn-gpios = <&gpio3 8 1>;   /* active high: EIM_DA8 */
+		rst-gpios = <&gpio3 9 0>;   /* active low: EIM_DA9 */
+		ipu_id = <1>;
+		csi_id = <1>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+
+	};
+#endif
+};
+&iomuxc	{
+	parallel_camera {
+		pinctrl_ov5640_csi1: ov5640_csi1 {
+			fsl,pins = <
+				MX6QDL_PAD_EIM_DA9__GPIO3_IO09          0x0001B0B0  /*rst-pins*/
+                                MX6QDL_PAD_EIM_DA6__GPIO3_IO06          0x0001B0B0  /*CAM2_STROBE*/
+                                MX6QDL_PAD_EIM_DA8__GPIO3_IO08          0x0001B0B0  /*pwn-gpios*/
+				MX6QDL_PAD_EIM_DA7__IPU2_CSI1_DATA02 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA2__IPU2_CSI1_DATA07 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA1__IPU2_CSI1_DATA08 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA0__IPU2_CSI1_DATA09 	0x0001B0B0
+				MX6QDL_PAD_EIM_EB1__IPU2_CSI1_DATA10 	0x0001B0B0
+				MX6QDL_PAD_EIM_EB0__IPU2_CSI1_DATA11 	0x0001B0B0
+				MX6QDL_PAD_EIM_A17__IPU2_CSI1_DATA12 	0x0001B0B0
+				MX6QDL_PAD_EIM_A18__IPU2_CSI1_DATA13 	0x0001B0B0
+				MX6QDL_PAD_EIM_A19__IPU2_CSI1_DATA14 	0x0001B0B0
+				MX6QDL_PAD_EIM_A20__IPU2_CSI1_DATA15 	0x0001B0B0
+				MX6QDL_PAD_EIM_A21__IPU2_CSI1_DATA16 	0x0001B0B0
+				MX6QDL_PAD_EIM_A22__IPU2_CSI1_DATA17 	0x0001B0B0
+				MX6QDL_PAD_EIM_A23__IPU2_CSI1_DATA18 	0x0001B0B0
+				MX6QDL_PAD_EIM_A24__IPU2_CSI1_DATA19 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA10__IPU2_CSI1_DATA_EN 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA11__IPU2_CSI1_HSYNC 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA12__IPU2_CSI1_VSYNC 	0x0001B0B0
+				MX6QDL_PAD_EIM_A16__IPU2_CSI1_PIXCLK 	0x0001B0B0
+			>;
+		};
+	};
+};
+
+#if 0
+&ov5640_mipi {
+	vc = <1>;
+};
+
+#if OV8825_MIPI_CAMERA
+&ov5640_parallel_1 {
+	status = "disabled";
+};
+
+&ov8825_mipi {
+	csi_id = <0>;
+};
+#endif
+
+&mipi_csi {
+	csi_id = <0>;
+};
+#endif
+
+&cpu0 {
+	arm-supply = <&reg_arm>;
+	soc-supply = <&reg_soc>;
+};
+
+&gpc {
+	/* use ldo-enable, u-boot will check it and configure */
+	fsl,ldo-bypass = <0>;
+	/* watchdog select of reset source */
+	fsl,wdog-reset = <1>;
+};
+
+&wdog1 {
+	status = "okay";
+};
+
+&wdog2 {
+	status = "disabled";
+};

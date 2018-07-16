@@ -1,0 +1,174 @@
+/* RTC driver and CODEC driver for ankaa base board */
+
+#include <dt-bindings/input/input.h>
+
+/ {
+	sound {
+		compatible = "fsl,imx6q-esomimx6-sgtl5000",
+			     "fsl,imx-audio-sgtl5000";
+		model = "imx6q-esomimx6-sgtl5000";
+		ssi-controller = <&ssi1>; /* not sure to which SSI ANKAA is connected to */
+		audio-codec = <&codec>;
+		audio-routing =
+			"MIC_IN", "Mic Jack",
+			"Mic Jack", "Mic Bias",
+			"Headphone Jack", "HP_OUT";
+		mux-int-port = <1>;
+		mux-ext-port = <3>;
+
+		};
+
+	backlight_lvds0 {
+		compatible = "pwm-backlight";
+		pwms = <&pwm3 0 5000000>;
+		brightness-levels = <0 4 8 16 32 64 128 255>;
+		default-brightness-level = <7>;
+	};
+
+};
+
+&i2c1 {
+	ds1338_rtc@68 {
+		compatible = "dallas,ds1338";
+		reg = <0x68>;
+	};
+
+	codec: sgtl5000@0a {
+		compatible = "fsl,sgtl5000";
+		reg = <0x0a>;
+		clocks = <&clks 201>;
+		VDDA-supply = <&reg_2p5v>;
+		VDDIO-supply = <&reg_3p3v>;
+	};
+
+	/* ov5640 parallel camera 1 */
+	ov5640_parallel_1: ov5640@3c {
+		compatible = "ovti,ov564x";
+		reg = <0x3c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu1_2>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&vgen4_reg>; /* 1.8v */ /* Not sure of these three values */
+		AVDD-supply = <&vgen3_reg>;  /* 2.8v, on rev C board is VGEN3,
+						on rev B board is VGEN5 */
+		DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
+		/* If proper GPIOs are given here, camera modules with proper GPIOs are not working
+		   So, GPIOs are not given proper here. TODO: Given proper GPIOs and make camera modules
+		   with porper GPIOs to work here
+		*/
+		pwn-gpios = <&gpio5 14 0>; /* eSOMiMX6*/
+		rst-gpios = <&gpio5 9 1>;  /* eSOMiMX6 */
+		ipu_id = <0>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+	};
+
+	/* mt9p031 parallel camera 1 */
+	mt9p031_parallel_1: mt9p031@48 {
+		compatible = "mt9p031m";
+		reg = <0x48>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu1_2>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&vgen4_reg>; /* 1.8v */ /* Not sure of these three values */
+		AVDD-supply = <&vgen3_reg>;  /* 2.8v, on rev C board is VGEN3,
+						on rev B board is VGEN5 */
+		DVDD-supply = <&vgen4_reg>;  /* 1.8v*/
+		/* If proper GPIOs are given here, camera modules with proper GPIOs are not working
+		   So, GPIOs are not given proper here. TODO: Given proper GPIOs and make camera modules
+		   with porper GPIOs to work here
+		*/
+		pwn-gpios = <&gpio5 14 0>; /* eSOMiMX6*/
+		rst-gpios = <&gpio5 9 1>;  /* eSOMiMX6 */
+		ipu_id = <0>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+	};
+
+	/* ov10633 parallel camera 1 */
+	ov10633_parallel_1: ov10633@30 {
+		compatible = "ovti,ov10633";
+		reg = <0x30>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu1_2>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&vgen4_reg>; /* 1.8v */ /* Not sure of these three values */
+		AVDD-supply = <&vgen3_reg>;  /* 2.8v, on rev C board is VGEN3,
+						on rev B board is VGEN5 */
+		DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
+		pwn-gpios = <&gpio5 14 1>; /* eSOMiMX6 */
+		rst-gpios = <&gpio5 9 0>; /* eSOMiMX6 */
+		ipu_id = <0>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+	};
+};
+
+&i2c2 {
+	ov5640: ov5640@3e {
+		compatible = "ovti,ov5640_parallel_2";
+		reg = <0x3e>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ov5640_csi1>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&vgen4_reg>; /* 1.8v */
+		AVDD-supply = <&vgen3_reg>;  /* 2.8v, on rev C board is VGEN3,
+						on rev B board is VGEN5 */
+		DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
+		/*pwn-gpios = <&gpio3 8 1>;*/   /* active high: EIM_DA8 */
+		/*rst-gpios = <&gpio3 9 0>;*/   /* active low: EIM_DA9 */
+		csi_id = <1>;
+		ipu_id = <1>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+		status = "okay";
+	};
+
+	mt9p031: mt9p031@48 {
+		compatible = "mt9p031m_2";
+		reg = <0x48>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ov5640_csi1>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&vgen4_reg>; /* 1.8v */
+		AVDD-supply = <&vgen3_reg>;  /* 2.8v, on rev C board is VGEN3,
+						on rev B board is VGEN5 */
+		DVDD-supply = <&vgen4_reg>;  /* 1.8v*/
+		pwn-gpios = <&gpio3 8 1>;   /* active high: EIM_DA8 */
+		rst-gpios = <&gpio3 9 0>;   /* active low: EIM_DA9 */
+		csi_id = <1>;
+		ipu_id = <1>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+		status = "okay";
+	};
+
+	/* ov10633 parallel camera 2 */
+	ov10633_parallel_2: ov10633@30 {
+		compatible = "ovti,ov10633_parallel_2";
+		reg = <0x30>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ov5640_csi1>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&vgen4_reg>; /* 1.8v */ /* Not sure of these three values */
+		AVDD-supply = <&vgen3_reg>;  /* 2.8v, on rev C board is VGEN3,
+						on rev B board is VGEN5 */
+		DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
+		pwn-gpios = <&gpio3 8 1>;   /* active high: EIM_DA8 */
+		rst-gpios = <&gpio3 9 0>;   /* active low: EIM_DA9 */
+		ipu_id = <1>;
+		csi_id = <1>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+
+	};
+};

@@ -1,0 +1,23 @@
+/* ar0330 camera module */
+&i2c2 {
+	ar0330_mipi: ar0330_mipi@3C {
+                compatible = "ar0330_mipi";
+		reg = <0x3C>;
+                clocks = <&clks 201>;
+                clock-names = "csi_mclk";
+                DOVDD-supply = <&vgen4_reg>; /* 1.8v */
+                AVDD-supply = <&vgen3_reg>;  /* 2.8v, rev C board is VGEN3
+                                                rev B board is VGEN5 */
+                DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
+                pwn-gpios = <&gpio5 5 0>;   /* active high: DISP_DATA11 */
+                rst-gpios = <&gpio4 31 1>;   /* active low: DISP_DATA10 */
+                ipu_id = <0>;
+                csi_id = <1>;
+                vc = <0>;
+                mclk = <24000000>;
+                mclk_source = <0>;
+                status="okay";
+        };
+};
+
+

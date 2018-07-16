@@ -1,0 +1,189 @@
+/*
+ * Copyright 2012=2015 Freescale Semiconductor, Inc.
+ * Copyright 2011 Linaro Ltd.
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/dts-v1/;
+
+#define OV8825_MIPI_CAMERA 0
+
+#include "imx6q.dtsi"
+#include "imx6qdl-esomimx6.dtsi"
+
+/ {
+	model = "ESOMIMX6 QUAD BOARD";
+	compatible = "fsl,imx6q-ankaa", "fsl,imx6q";
+
+	v4l2_cap_2 {
+		compatible = "fsl,imx6q-v4l2-capture";
+		ipu_id = <1>;
+		csi_id = <1>;
+		mclk_source = <0>;
+		status = "okay";
+	};
+
+};
+
+&cpu0 {
+	arm-supply = <&reg_arm>;
+	soc-supply = <&reg_soc>;
+};
+
+&gpc {
+	/* use ldo-enable, u-boot will check it and configure */
+	fsl,ldo-bypass = <0>;
+	/* watchdog select of reset source */
+	fsl,wdog-reset = <1>;
+};
+
+&wdog1 {
+	status = "okay";
+};
+
+&wdog2 {
+	status = "disabled";
+};
+
+&i2c2 {
+        ar1820_mipi: ar1820_mipi@3C {
+                compatible = "aptina,ar1820_mipi";
+		reg = <0x3C>;
+                clocks = <&clks 201>;
+                clock-names = "csi_mclk";
+                DOVDD-supply = <&vgen4_reg>; /* 1.8v */
+                AVDD-supply = <&vgen3_reg>;  /* 2.8v, rev C board is VGEN3
+                                                rev B board is VGEN5 */
+                DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
+                pwn-gpios = <&gpio5 5 0>;   /* active high: DISP_DATA11 but it is not used by the camera module*/
+                rst-gpios = <&gpio4 31 1>;   /* active low: DISP_DATA10 */
+                ipu_id = <0>;
+                csi_id = <1>;
+                vc = <1>;
+                mclk = <24000000>;
+                mclk_source = <0>;
+                status="okay";
+        };
+	ov5640: ov5640@3e {
+		compatible = "ovti,ov5640_parallel_2";
+		reg = <0x3e>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ov5640_csi1>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&vgen4_reg>; /* 1.8v */
+		AVDD-supply = <&vgen3_reg>;  /* 2.8v, on rev C board is VGEN3,
+						on rev B board is VGEN5 */
+		DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
+		/*pwn-gpios = <&gpio5 15 1>;*/   /* active high: DISP0_DAT21 */
+		/*rst-gpios = <&gpio5 8 0>;*/   /* active low: DISP0_DAT14 */
+		csi_id = <1>;
+		ipu_id = <1>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+		status = "okay";
+	};
+
+	mt9p031: mt9p031@48 {
+		compatible = "mt9p031m_2";
+		reg = <0x48>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ov5640_csi1>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&vgen4_reg>; /* 1.8v */
+		AVDD-supply = <&vgen3_reg>;  /* 2.8v, on rev C board is VGEN3,
+						on rev B board is VGEN5 */
+		DVDD-supply = <&vgen4_reg>;  /* 1.8v*/
+		pwn-gpios = <&gpio5 15 1>;   /* active high: DISP0_DAT21 */
+		rst-gpios = <&gpio5 8 0>;   /* active low: DISP0_DAT14 */
+		csi_id = <1>;
+		ipu_id = <1>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+		status = "okay";
+	};
+
+	/* ov10633 parallel camera 1 */
+	ov10633_parallel_2: ov10633@30 {
+		compatible = "ovti,ov10633_parallel_2";
+		reg = <0x30>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ov5640_csi1>;
+		clocks = <&clks 201>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&vgen4_reg>; /* 1.8v */ /* Not sure of these three values */
+		AVDD-supply = <&vgen3_reg>;  /* 2.8v, on rev C board is VGEN3,
+						on rev B board is VGEN5 */
+		DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
+		pwn-gpios = <&gpio5 15 1>;   /* active high: DISP0_DAT21 */
+		rst-gpios = <&gpio5 8 0>;   /* active low: DISP0_DAT14 */
+		ipu_id = <1>;
+		csi_id = <1>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+
+	};
+};
+
+&iomuxc	{
+	parallel_camera {
+		pinctrl_ov5640_csi1: ov5640_csi1 {
+			fsl,pins = <
+				MX6QDL_PAD_EIM_DA9__IPU2_CSI1_DATA00   0x0001B0B0
+				MX6QDL_PAD_EIM_DA8__IPU2_CSI1_DATA01 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA7__IPU2_CSI1_DATA02 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA5__IPU2_CSI1_DATA04 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA4__IPU2_CSI1_DATA05 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA3__IPU2_CSI1_DATA06 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA2__IPU2_CSI1_DATA07 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA1__IPU2_CSI1_DATA08 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA0__IPU2_CSI1_DATA09 	0x0001B0B0
+				MX6QDL_PAD_EIM_EB1__IPU2_CSI1_DATA10 	0x0001B0B0
+				MX6QDL_PAD_EIM_EB0__IPU2_CSI1_DATA11 	0x0001B0B0
+				MX6QDL_PAD_EIM_A17__IPU2_CSI1_DATA12 	0x0001B0B0
+				MX6QDL_PAD_EIM_A18__IPU2_CSI1_DATA13 	0x0001B0B0
+				MX6QDL_PAD_EIM_A19__IPU2_CSI1_DATA14 	0x0001B0B0
+				MX6QDL_PAD_EIM_A20__IPU2_CSI1_DATA15 	0x0001B0B0
+				MX6QDL_PAD_EIM_A21__IPU2_CSI1_DATA16 	0x0001B0B0
+				MX6QDL_PAD_EIM_A22__IPU2_CSI1_DATA17 	0x0001B0B0
+				MX6QDL_PAD_EIM_A23__IPU2_CSI1_DATA18 	0x0001B0B0
+				MX6QDL_PAD_EIM_A24__IPU2_CSI1_DATA19 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA10__IPU2_CSI1_DATA_EN 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA11__IPU2_CSI1_HSYNC 	0x0001B0B0
+				MX6QDL_PAD_EIM_DA12__IPU2_CSI1_VSYNC 	0x0001B0B0
+				MX6QDL_PAD_EIM_A16__IPU2_CSI1_PIXCLK 	0x0001B0B0
+			>;
+		};
+	};
+};
+
+
+
+&mxcfb1 {
+	status = "okay";
+};
+
+&mxcfb2 {
+	status = "okay";
+};
+
+&mxcfb3 {
+	status = "okay";
+};
+
+&mxcfb4 {
+	status = "okay";
+};
+
+&sata {
+	status = "okay";
+};
+
+
