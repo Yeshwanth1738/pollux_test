@@ -929,9 +929,9 @@ static int wm8750_remove(struct snd_soc_codec *codec)
 
 static struct snd_soc_codec_driver soc_codec_dev_wm8750 = {
 	.probe =	wm8750_probe,
-	.remove =	wm8750_remove,
-	.suspend =	wm8750_suspend,
-	.resume =	wm8750_resume,
+//	.remove =	wm8750_remove,
+//	.suspend =	wm8750_suspend,
+//	.resume =	wm8750_resume,
 	.set_bias_level = wm8750_set_bias_level,
 	.suspend_bias_off = true,
 

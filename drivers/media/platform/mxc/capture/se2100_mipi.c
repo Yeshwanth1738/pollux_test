@@ -969,7 +969,10 @@ static int se2100_suspend(struct device *dev)
 	udelay(10);
 	gpio_set_value(pwdn_gpio,1);
 	udelay(10);
+	gpio_set_value(mclk_en_gpio,0);
+	udelay(10);
 	gpio_set_value(pwr_en_gpio,0);
+	udelay(10);
 	return retval;
 
 }
@@ -977,12 +980,14 @@ static int se2100_suspend(struct device *dev)
 static int se2100_resume(struct device *dev)
 {
 	int ret=0;
-	printk("%s\n",__func__);
 	/*reload all registers*/
 	gpio_set_value(pwr_en_gpio,1);
+	udelay(10);
+	gpio_set_value(mclk_en_gpio,1);
 	udelay(110);
 	gpio_set_value(pwdn_gpio,0);
 	udelay(10);
+	reset_regs();
 	ret=barcode_resume();
 	return ret;
 }
@@ -1065,10 +1070,11 @@ static int se2100_probe(struct i2c_client *client, const struct i2c_device_id *d
 		se2100_data.vc = 0;
 	}
 
-	gpio_set_value(mclk_en_gpio,1);
-	clk_prepare_enable(se2100_data.sensor_clk);
 
 	gpio_set_value(pwr_en_gpio,1);
+	udelay(10);
+	gpio_set_value(mclk_en_gpio,1);
+	clk_prepare_enable(se2100_data.sensor_clk);
 	udelay(110);
 	se2100_data.i2c_client = client;
 	se2100_data.pix.pixelformat = V4L2_PIX_FMT_UYVY;

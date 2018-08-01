@@ -114,7 +114,7 @@ struct py480 {
 static struct sensor_data *py480_data;
 static int rst_gpio, cam_pwr_en_gpio, pix_cam_en_gpio,five_v_en_gpio,one_p_eight_en_gpio,clk_en_gpio;
 static u32 reg_width,bus_width;
-
+bool py480_suspend_state;
 
 #define DEF_WIDTH	808
 #define DEF_HEIGHT	608
@@ -162,6 +162,7 @@ static int py480_probe(struct spi_device *spi);
 static int py480_remove(struct spi_device *spi);
 static int py480_suspend(struct device *dev);
 static int py480_resume(struct device *dev);
+static int py480_sysfs_suspend(bool state);
 
 
 static const struct spi_device_id py480_id[] = {
@@ -1204,7 +1205,132 @@ static int py480_suspend(struct device *dev)
 	udelay(10);
 	gpio_set_value(five_v_en_gpio, 0);
 	udelay(10);
+	printk(KERN_INFO"py480 suspending\n");
+	
+	return 0;
+}
 
+
+
+/*!
+ * py480 SPI sysfs suspned function
+ *
+ * @param dev            struct device *
+ * @return  Error code indicating success or failure
+ */
+
+static int py480_sysfs_suspend(bool state)
+{
+
+	int ret,retries=0;
+	u16 regval = 0;
+	u16 pllreg = 0;
+	enum py480_frame_rate frame_rate = py480_30_fps;
+
+	if(state == 1)
+	{
+		/*Disable sequencer*/
+		pllreg = 192;
+		regval = 0x0802;
+		ret = py480_write_reg(py480_data->spi,pllreg, regval);
+		if (ret < 0)
+			return ret;
+
+		/*soft power down*/	
+		ret = py480_download_firmware(py480_soft_power_down,ARRAY_SIZE(py480_soft_power_down));
+		if(ret < 0)
+			return ret;
+
+		/*disable clock management2*/	
+		ret = py480_download_firmware(py480_disable_clock_management2,ARRAY_SIZE(py480_disable_clock_management2));
+		if(ret < 0)
+			return ret;
+
+		/*disable clock management1*/	
+		ret = py480_download_firmware(py480_disable_clock_management1,ARRAY_SIZE(py480_disable_clock_management1));
+		if(ret < 0)
+			return ret;
+
+		/*assertion of reset pin to 0*/
+		gpio_set_value(rst_gpio, 0);
+		udelay(10);
+		gpio_set_value(clk_en_gpio, 0);
+		udelay(10);
+		gpio_set_value(pix_cam_en_gpio, 0);
+		udelay(10);
+		gpio_set_value(cam_pwr_en_gpio, 0);
+		udelay(10);
+		gpio_set_value(five_v_en_gpio, 0);
+		udelay(10);
+		printk(KERN_INFO"py480 suspending\n");
+	}
+	else if(state == 0)
+	{
+	 	regval = 0;
+		 pllreg = 24;
+		/*5v gpio*/
+		gpio_set_value(five_v_en_gpio, 1);
+		mdelay(1);
+		/*camera power*/
+		gpio_set_value(cam_pwr_en_gpio, 1);
+		udelay(10);
+		/*pix clk*/
+		gpio_set_value(pix_cam_en_gpio, 1);
+		udelay(10);
+		/*enable */
+		gpio_set_value(clk_en_gpio, 1);
+		mdelay(2);
+		/*assertion of reset pin to 1*/
+		gpio_set_value(rst_gpio, 1);
+		udelay(10);
+		printk(KERN_INFO"py480 resuming\n");
+#if 1 
+ 
+		/*Enabling Clock Management Part 1*/
+		ret = py480_download_firmware(py480_enable_clk_management1, 
+			ARRAY_SIZE(py480_enable_clk_management1));
+		if (ret < 0)
+			return ret;
+
+		/*check pll to be locked */
+		while((regval == 0) && (retries < 20))
+		{
+			ret = py480_read_reg(py480_data->spi,&pllreg,&regval);
+			if(ret < 0)
+				return ret;
+			printk("regval=0x%x\n",regval);
+			retries++;
+			udelay(100);
+			if (retries == 20)
+				printk("pll lock error\n");
+		}
+		/*Enabling Clock Management Part 2*/
+		ret = py480_download_firmware(py480_enable_clk_management2, 
+			ARRAY_SIZE(py480_enable_clk_management2));
+		if (ret < 0)
+			return ret;
+	
+		ret = py480_init_mode();
+		if(ret < 0)
+			return ret;
+
+		ret = py480_download_firmware(py480_gain_10,ARRAY_SIZE(py480_gain_10));
+			if(ret < 0)
+		return ret;
+	
+		ret = py480_change_mode(frame_rate,py480_mode_808x608);
+		if(ret < 0)
+		return ret;
+		/*Enable sequencer*/
+		pllreg = 192;
+		regval = 0x0801;
+		ret = py480_write_reg(py480_data->spi,pllreg, regval);
+		if (ret < 0)
+			return ret;
+
+#endif
+
+	}
 	return 0;
 }
 
@@ -1228,7 +1354,7 @@ static int py480_resume(struct device *dev)
 	gpio_set_value(cam_pwr_en_gpio, 1);
 	udelay(10);
 	/*pix clk*/
-	gpio_set_value(pix_cam_en_gpio, 0);
+	gpio_set_value(pix_cam_en_gpio, 1);
 	udelay(10);
 	/*enable */
 	gpio_set_value(clk_en_gpio, 1);
@@ -1236,6 +1362,7 @@ static int py480_resume(struct device *dev)
 	/*assertion of reset pin to 1*/
 	gpio_set_value(rst_gpio, 1);
 	udelay(10);
+	printk(KERN_INFO"py480 resuming\n");
 #if 0 
 	/*Enabling Clock Management Part 1*/
 	ret = py480_download_firmware(py480_enable_clk_management1, 
@@ -1283,6 +1410,43 @@ static int py480_resume(struct device *dev)
 	return 0;
 }
 
+
+static ssize_t py480_suspend_state_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	
+	return sprintf(buf, "%u\n", py480_suspend_state);
+}
+
+static ssize_t py480_suspend_state_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int rc = -ENXIO;
+	unsigned long data;
+
+	rc = kstrtoul(buf, 0, &data);
+	if (rc)
+		return rc;
+
+	py480_suspend_state = (bool)data;
+	
+	py480_sysfs_suspend(py480_suspend_state);
+		
+	rc =count;
+	return rc;
+}
+static DEVICE_ATTR_RW(py480_suspend_state);
+
+static struct attribute *suspend_attrs[] = {
+	&dev_attr_py480_suspend_state.attr,
+	NULL,
+};
+
+static struct attribute_group py480_attr_group = {
+	.attrs = suspend_attrs,
+};
+
+
 /*!
  * py480 SPI probe function
  *
@@ -1292,7 +1456,7 @@ static int py480_resume(struct device *dev)
 static int py480_probe(struct spi_device *spi)
 {
 	struct pinctrl *pinctrl;	
-	int retval;
+	int retval,error;
 	u16 chip_id = 0;
 	u16 val=0;
 
@@ -1460,14 +1624,23 @@ static int py480_probe(struct spi_device *spi)
 	}
 	printk("py480 camera sensor chip id: 0x%x\n", val);
 
+	error = sysfs_create_group(&spi->dev.kobj, &py480_attr_group);
+	if (error) {
+		dev_err(&spi->dev, "Unable to export suspend state, error: %d\n",
+			error);
+		return error;
+	}
 	
 	clk_disable_unprepare(py480_data->sensor_clk);
 		
 	py480_int_device.priv = py480_data;
 	retval = v4l2_int_device_register(&py480_int_device);
-	if (retval < 0)
+	if (retval < 0){
 		dev_err(&spi->dev, "%s--v4l2_int_device_register failed, ret=%d\n", __func__, retval);
-
+		sysfs_remove_group(&spi->dev.kobj, &py480_attr_group);		
+		return retval;
+		
+	}
 	pr_info("camera py480 is found\n");
 	return retval;
 }
@@ -1480,6 +1653,7 @@ static int py480_probe(struct spi_device *spi)
  */
 static int py480_remove(struct spi_device *spi)
 {
+	sysfs_remove_group(&spi->dev.kobj, &py480_attr_group);		
 	v4l2_int_device_unregister(&py480_int_device);
 	printk("in %s\n",__func__);
 

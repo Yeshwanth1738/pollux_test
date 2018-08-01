@@ -35,7 +35,8 @@ struct fb_hx8347g {
 };
 
 struct fb_hx8347g *fb_hx8347g_data;
-
+int pwdn_gpio;
+bool hx8347_suspend_state;
 void fb_hx8347g_reset(int gpio)
 {
 	//gpio_set_value(gpio, 0);
@@ -307,6 +308,8 @@ static int fb_hx8347g_suspend(struct device *dev)
 {
 
 	printk("%s\n",__func__);
+	/* power off lvds chip */
+	gpio_set_value(pwdn_gpio,0);
 	/*display off setting */
 	write_reg(fb_hx8347g_data, 0x28, 0x38);//GON=1, DTE=1, D=1000
 	mdelay(40);
@@ -320,10 +323,56 @@ static int fb_hx8347g_suspend(struct device *dev)
 	return 0;
 }
 
+static int fb_hx8347g_sysfs_suspend(bool state)
+{
+
+	if(state == 1)
+	{
+		/* power off lvds chip */
+		gpio_set_value(pwdn_gpio,0);
+		printk("%s\n",__func__);
+		/*display off setting */
+		write_reg(fb_hx8347g_data, 0x28, 0x38);//GON=1, DTE=1, D=1000
+		mdelay(40);
+		write_reg(fb_hx8347g_data, 0x28, 0x34);//GON=1, DTE=1, D=1100
+		/*set standby*/
+		write_reg(fb_hx8347g_data, 0x1F, 0x89);/*GAS=1, VOMG=00, PON=0, DK=1, XDK=0, DVDH_TRI=0, STB=1*/
+		mdelay(5);
+		/*oscillator disable*/
+		write_reg(fb_hx8347g_data, 0x19, 0x00); /* start osc OSC_EN=0 */
+	}
+	else if(state == 0)
+	{
+		/* power on lvds chip */
+		gpio_set_value(pwdn_gpio,1);
+		printk("%s\n",__func__);
+		/* power on */
+		write_reg(fb_hx8347g_data, 0x18, 0x36);//RADJ 70HZ
+		write_reg(fb_hx8347g_data, 0x19, 0x01); /* start osc OSC_EN=1 */
+		write_reg(fb_hx8347g_data, 0x1F, 0x88);/*GAS=1, VOMG=00, PON=0, DK=1, XDK=0, DVDH_TRI=0, STB=0*/
+		mdelay(5);
+		write_reg(fb_hx8347g_data, 0x1F, 0x80);/*GAS=1, VOMG=00, PON=0, DK=0, XDK=0, DVDH_TRI=0, STB=0*/
+		mdelay(5);
+		write_reg(fb_hx8347g_data, 0x1F, 0x90);/*GAS=1, VOMG=00, PON=1, DK=0, XDK=0, DVDH_TRI=0, STB=0*/
+		mdelay(5);
+		write_reg(fb_hx8347g_data, 0x1F, 0xD4);/*GAS=1, VOMG=10, PON=1, DK=0, XDK=1, DDVDH_TRI=0, STB=0*/
+		mdelay(5);
+
+		/*display on setting */
+		write_reg(fb_hx8347g_data, 0x28, 0x38);//GON=1, DTE=1, D=1000
+		mdelay(40);
+		write_reg(fb_hx8347g_data, 0x28, 0x3C);//GON=1, DTE=1, D=1100
+
+	}
+	return 0;
+}
 
 static int fb_hx8347g_resume(struct device *dev)
 {
 	printk("%s\n",__func__);
+	/* power on lvds chip */
+	gpio_set_value(pwdn_gpio,1);
+
 	/* power on */
 	write_reg(fb_hx8347g_data, 0x18, 0x36);//RADJ 70HZ
 	write_reg(fb_hx8347g_data, 0x19, 0x01); /* start osc OSC_EN=1 */
@@ -341,15 +390,51 @@ static int fb_hx8347g_resume(struct device *dev)
 	mdelay(40);
 	write_reg(fb_hx8347g_data, 0x28, 0x3C);//GON=1, DTE=1, D=1100
 
+
 	return 0;
 }
+
+static ssize_t hx8347_suspend_state_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	
+	return sprintf(buf, "%u\n", hx8347_suspend_state);
+}
+
+static ssize_t hx8347_suspend_state_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int rc = -ENXIO;
+	unsigned long data;
+
+	rc = kstrtoul(buf, 0, &data);
+	if (rc)
+		return rc;
+
+	hx8347_suspend_state = (bool)data;
+	
+	fb_hx8347g_sysfs_suspend(hx8347_suspend_state);
+		
+	rc =count;
+	return rc;
+}
+static DEVICE_ATTR_RW(hx8347_suspend_state);
+
+static struct attribute *suspend_attrs[] = {
+	&dev_attr_hx8347_suspend_state.attr,
+	NULL,
+};
+
+static struct attribute_group hx8347_attr_group = {
+	.attrs = suspend_attrs,
+};
 
 static int fb_hx8347g_probe(struct spi_device *spi)
 {
 	struct fb_hx8347g *fb_hx8347g;
 	void *buf = NULL;
 	int ret;
-	int pwdn_gpio,gpio, flags;
+	int gpio, flags,error;
 	enum of_gpio_flags of_flags;
 
 	fb_hx8347g = devm_kzalloc(&spi->dev, sizeof(*fb_hx8347g), GFP_KERNEL);
@@ -443,6 +528,13 @@ static int fb_hx8347g_probe(struct spi_device *spi)
 		}
 	}
 
+	error = sysfs_create_group(&spi->dev.kobj, &hx8347_attr_group);
+	if (error) {
+		dev_err(&spi->dev, "Unable to export suspend state, error: %d\n",
+			error);
+		return error;
+	}
+
 	/* configure lcd */
 	//fb_hx8347g_init_display(fb_hx8347g);//already configured in u-boot
 
@@ -456,6 +548,7 @@ err1:
 
 static int fb_hx8347g_remove(struct spi_device *spi)
 {
+	sysfs_remove_group(&spi->dev.kobj, &hx8347_attr_group);	
 	return 0;
 }
 

@@ -103,14 +103,6 @@
 			regulator-always-on;
 		};
 
-		tsc2046reg: tsc2046-reg {
-			compatible = "regulator-fixed";
-			regulator-name = "tsc2046-reg";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-always-on;
-		};
-
 		wilink_wl_en: regulator@5 {
 			compatible = "regulator-fixed";
 			reg = <5>;
@@ -303,56 +295,64 @@
 			linux,code = <30>;//'A'
 			gpios = <&gpio7 12 1>;
 			debounce-interval = <50>;
-			 gpio-key,wakeup;
+			// gpio-key,wakeup;
 		};
 		key_down {
 			label = "Key DOWN";
 			linux,code = <48>;//'B'
 			gpios = <&gpio7 11 1>;
 			debounce-interval = <50>;
-			 gpio-key,wakeup;
+			// gpio-key,wakeup;
 		};
 		key_left {
 			label = "Key LEFT";
 			linux,code = <46>;//'C'
 			gpios = <&gpio1 5 1>;
 			debounce-interval = <50>;
-			 gpio-key,wakeup;
+			// gpio-key,wakeup;
 		};
 		key_right {
 			label = "Key RIGHT";
 			linux,code = <32>;//'D'
 			gpios = <&gpio1 6 1>;
 			debounce-interval = <50>;
-			 gpio-key,wakeup;
+			// gpio-key,wakeup;
 		};
 		key_enter {
 			label = "Key ENTER";
 			linux,code = <18>;//'E'
 			gpios = <&gpio4 29 1>;
 			debounce-interval = <50>;
-			 gpio-key,wakeup;
+			// gpio-key,wakeup;
 		};
 		key_left_eye {
 			label = "Key LEFT_EYE";
 			linux,code = <38>;//'L'
 			gpios = <&gpio4 14 1>;
 			debounce-interval = <50>;
-			 gpio-key,wakeup;
+			// gpio-key,wakeup;
 		};
 		key_right_eye {
 			label = "Key RIGHT_EYE";
 			linux,code = <19>;//'R'
 			gpios = <&gpio4 15 1>;
 			debounce-interval = <50>;
-			 gpio-key,wakeup;
+			// gpio-key,wakeup;
 		};
 		key_on_off{
 			label = "KEY_ON_OFF";
-			linux,code = <24>;//'0'
+			linux,code = <24>;//'O'
 			gpios = <&gpio6 00 1>;
 			debounce-interval = <50>;
+			// gpio-key,wakeup;
+		};
+
+		dc_detect_interrupt{
+			label = "DC_DETECT_WAKEUP";
+			gpios = <&gpio5 19 1>;
+			linux,code = <50>;//'M'
 			 gpio-key,wakeup;
+
 		};
 	};
 #endif	
@@ -431,25 +431,26 @@
         	compatible = "ti,tsc2046";
   		pinctrl-names = "default";
   		pinctrl-0 = <&pinctrl_touch>;
-              	spi-max-frequency = <1500000>;//1500000
-		/*vcc-supply = <&reg_3p3v>; */
+              	spi-max-frequency = <2000000>;//1500000
+		vcc-supply = <&reg_3p3v>; 
 		
             	reg = <0>; /* CS0 */
 		interrupt-parent = <&gpio4>;
 		interrupts = <28 IRQ_TYPE_LEVEL_HIGH>;
 	        pendown-gpio = <&gpio4 28 0>;
-		ti,keep-vref-on;//without working
+		//ti,keep-vref-on;//without working
 		/* driver defaults */
 #if 1
 		ti,x-min = /bits/ 16 <0>;
 		ti,y-min = /bits/ 16 <0>;
 		ti,x-max = /bits/ 16 <4095>;
-		ti,y-max = /bits/ 16 <4095>;
-		//ti,pressure-min = /bits/ 16 <0>;
-		//ti,pressure-max = /bits/ 16 <255>;
-		//ti,x-plate-ohms = /bits/ 16 <180>;
-		ti,debounce-max = /bits/ 16 <10>;
-		ti,debounce-tol = /bits/ 16 <5>; 
+		ti,y-max = /bits/ 16 <3930>;
+		//ti,vref-delay-usecs = /bits/ 16 <100>;
+		ti,pressure-min = /bits/ 16 <0>;
+		ti,pressure-max = /bits/ 16 <65535>;
+		ti,x-plate-ohms = /bits/ 16 <400>;
+		ti,debounce-max = /bits/ 16 <30>;//2
+		ti,debounce-tol = /bits/ 16 <10>;//4 
 		ti,debounce-rep = /bits/ 16 <1>;  
 
 #endif
@@ -472,7 +473,7 @@
 
 #endif
 
-		linux,wakeup;
+		//linux,wakeup;
 		ti,swap-xy;
 		
 		status = "okay";
@@ -1000,7 +1001,7 @@
 			      fsl,pins = <
 
 				   MX6QDL_PAD_EIM_D21__GPIO3_IO21          0x0001B0B0  /*rst-pins*/
-				 //  MX6QDL_PAD_EIM_D31__GPIO3_IO31	   0x0001B0B0  /*clk_en-gpios*/
+				   MX6QDL_PAD_EIM_D31__GPIO3_IO31	   0x0001B0B0  /*clk_en-gpios*/
                                    MX6QDL_PAD_CSI0_DAT19__GPIO6_IO05       0x0001B0B0  /*cam_en-gpios regulator*/
                                    MX6QDL_PAD_CSI0_DAT11__GPIO5_IO29       0x0001B0B0  /*pix_en-gpios*/				
 							     
@@ -1047,7 +1048,8 @@
 				MX6QDL_PAD_GPIO_6__GPIO1_IO06		0x1b0b0
 				MX6QDL_PAD_DISP0_DAT8__GPIO4_IO29	0x1b0b0
 				MX6QDL_PAD_KEY_ROW4__GPIO4_IO15		0x1b0b0
-				MX6QDL_PAD_KEY_COL4__GPIO4_IO14		0x1b0b0 
+				MX6QDL_PAD_KEY_COL4__GPIO4_IO14		0x1b0b0
+				MX6QDL_PAD_CSI0_MCLK__GPIO5_IO19	0x1b0b0 
 			>;
 		};
 	
@@ -1234,7 +1236,7 @@
 	status = "okay";
 };
 
-/* RS232 port */
+/* RS232 port (MCU for Pollux4) */
 &uart2 {
 	status = "okay";
 	pinctrl-names = "default";
