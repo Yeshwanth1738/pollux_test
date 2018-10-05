@@ -115,6 +115,7 @@ static struct sensor_data *py480_data;
 static int rst_gpio, cam_pwr_en_gpio, pix_cam_en_gpio,five_v_en_gpio,one_p_eight_en_gpio,clk_en_gpio;
 static u32 reg_width,bus_width;
 bool py480_suspend_state;
+static int last_capture_mode; 
 
 #define DEF_WIDTH	808
 #define DEF_HEIGHT	608
@@ -490,7 +491,6 @@ static int py480_change_mode(enum py480_frame_rate frame_rate,
 
 static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 {
-	printk("in %s\n",__func__);
 	if (s == NULL) {
 		pr_err("   ERROR!! no slave device set!\n");
 		return -1;
@@ -522,7 +522,16 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 	struct sensor_data *sensor = s->priv;
 
 	sensor->on = on;
-	py480_reset();		
+	if(on)
+	{		
+		gpio_set_value(rst_gpio, 1);
+		udelay(10);	
+	}
+	else
+	{
+		gpio_set_value(rst_gpio, 0);
+		udelay(10);	
+	}
 	printk("in %s\n",__func__);
 	return 0;
 }
@@ -540,7 +549,6 @@ static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	struct v4l2_captureparm *cparm = &a->parm.capture;
 	int ret = 0;
 
-	printk("in %s\n",__func__);
 	switch (a->type) {
 	/* This is the only case currently handled. */
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
@@ -589,7 +597,6 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	enum py480_frame_rate frame_rate;
 	int ret = 0;
 
-	printk("in %s\n",__func__);
 	switch (a->type) {
 	/* This is the only case currently handled. */
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
@@ -631,6 +638,7 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 
 		sensor->streamcap.timeperframe = *timeperframe;
 		sensor->streamcap.capturemode = a->parm.capture.capturemode;
+		last_capture_mode = a->parm.capture.capturemode;
 
 		break;
 
@@ -759,7 +767,6 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 {
 	int ret = 0;
 
-	printk("in %s\n",__func__);
 	switch (vc->id) {
 	case V4L2_CID_BRIGHTNESS:
 		vc->value = py480_data->brightness;
@@ -804,7 +811,6 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 {
 	int retval = 0;
 
-	printk("in %s\n",__func__);
 	pr_debug("In py480:ioctl_s_ctrl %d\n",
 		 vc->id);
 
@@ -869,7 +875,6 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 				 struct v4l2_frmsizeenum *fsize)
 {
-	printk("in %s\n",__func__);
 	if (fsize->index > py480_mode_MAX)
 		return -EINVAL;
 
@@ -897,7 +902,6 @@ static int ioctl_enum_frameintervals(struct v4l2_int_device *s,
 {
 	int i, j, count;
 
-	printk("in %s\n",__func__);
 	if (fival->index < 0 || fival->index > py480_mode_MAX)
 		return -EINVAL;
 
@@ -952,7 +956,6 @@ static int ioctl_init(struct v4l2_int_device *s)
 static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
 			      struct v4l2_fmtdesc *fmt)
 {
-	printk("in %s\n",__func__);
 	if (fmt->index > py480_mode_MAX)
 		return -EINVAL;
 
@@ -1025,7 +1028,7 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 		frame_rate = py480_60_fps;
 	else
 		return -EINVAL; /* Only support 30fps or 60fps now. */
-
+	
 	ret = py480_init_mode();
 	if(ret < 0)
 		return ret;
@@ -1038,6 +1041,7 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 	ret = py480_change_mode(frame_rate,py480_mode_808x608);
 	if(ret < 0)
 		return ret;
+	last_capture_mode = 0;
 	/*Enable sequencer*/
 	pllreg = 192;
 	regval = 0x0801;
@@ -1080,6 +1084,7 @@ static int ioctl_dbg_g_register(struct v4l2_int_device *s, struct v4l2_dbg_regis
 		return retval;
 		
 	id->val=val;
+	printk("in %s\n",__func__);
 	
 	return 0;
 }
@@ -1229,28 +1234,6 @@ static int py480_sysfs_suspend(bool state)
 
 	if(state == 1)
 	{
-		/*Disable sequencer*/
-		pllreg = 192;
-		regval = 0x0802;
-		ret = py480_write_reg(py480_data->spi,pllreg, regval);
-		if (ret < 0)
-			return ret;
-
-		/*soft power down*/	
-		ret = py480_download_firmware(py480_soft_power_down,ARRAY_SIZE(py480_soft_power_down));
-		if(ret < 0)
-			return ret;
-
-		/*disable clock management2*/	
-		ret = py480_download_firmware(py480_disable_clock_management2,ARRAY_SIZE(py480_disable_clock_management2));
-		if(ret < 0)
-			return ret;
-
-		/*disable clock management1*/	
-		ret = py480_download_firmware(py480_disable_clock_management1,ARRAY_SIZE(py480_disable_clock_management1));
-		if(ret < 0)
-			return ret;
-
 		/*assertion of reset pin to 0*/
 		gpio_set_value(rst_gpio, 0);
 		udelay(10);
@@ -1284,32 +1267,8 @@ static int py480_sysfs_suspend(bool state)
 		gpio_set_value(rst_gpio, 1);
 		udelay(10);
 		printk(KERN_INFO"py480 resuming\n");
-#if 1 
+#if 1
  
-		/*Enabling Clock Management Part 1*/
-		ret = py480_download_firmware(py480_enable_clk_management1, 
-			ARRAY_SIZE(py480_enable_clk_management1));
-		if (ret < 0)
-			return ret;
-
-		/*check pll to be locked */
-		while((regval == 0) && (retries < 20))
-		{
-			ret = py480_read_reg(py480_data->spi,&pllreg,&regval);
-			if(ret < 0)
-				return ret;
-			printk("regval=0x%x\n",regval);
-			retries++;
-			udelay(100);
-			if (retries == 20)
-				printk("pll lock error\n");
-		}
-		/*Enabling Clock Management Part 2*/
-		ret = py480_download_firmware(py480_enable_clk_management2, 
-			ARRAY_SIZE(py480_enable_clk_management2));
-		if (ret < 0)
-			return ret;
-	
 		ret = py480_init_mode();
 		if(ret < 0)
 			return ret;
@@ -1317,10 +1276,16 @@ static int py480_sysfs_suspend(bool state)
 		ret = py480_download_firmware(py480_gain_10,ARRAY_SIZE(py480_gain_10));
 			if(ret < 0)
 		return ret;
-	
-		ret = py480_change_mode(frame_rate,py480_mode_808x608);
+
+		if(last_capture_mode == 0)	
+			ret = py480_change_mode(frame_rate,py480_mode_808x608);
+		else if(last_capture_mode == 1)
+			ret = py480_change_mode(frame_rate,py480_mode_640x480);
+		else if(last_capture_mode == 2)
+			ret = py480_change_mode(frame_rate,py480_mode_320x240);
+
 		if(ret < 0)
-		return ret;
+			return ret;
 		/*Enable sequencer*/
 		pllreg = 192;
 		regval = 0x0801;
@@ -1363,31 +1328,7 @@ static int py480_resume(struct device *dev)
 	gpio_set_value(rst_gpio, 1);
 	udelay(10);
 	printk(KERN_INFO"py480 resuming\n");
-#if 0 
-	/*Enabling Clock Management Part 1*/
-	ret = py480_download_firmware(py480_enable_clk_management1, 
-			ARRAY_SIZE(py480_enable_clk_management1));
-	if (ret < 0)
-		return ret;
-
-	/*check pll to be locked */
-	while((regval == 0) && (retries < 20))
-	{
-		ret = py480_read_reg(py480_data->spi,&pllreg,&regval);
-		if(ret < 0)
-			return ret;
-		printk("regval=0x%x\n",regval);
-		retries++;
-		udelay(100);
-		if (retries == 20)
-			printk("pll lock error\n");
-	}
-	/*Enabling Clock Management Part 2*/
-	ret = py480_download_firmware(py480_enable_clk_management2, 
-			ARRAY_SIZE(py480_enable_clk_management2));
-	if (ret < 0)
-		return ret;
-	
+#if 1 
 	ret = py480_init_mode();
 	if(ret < 0)
 		return ret;
@@ -1395,10 +1336,17 @@ static int py480_resume(struct device *dev)
 	ret = py480_download_firmware(py480_gain_10,ARRAY_SIZE(py480_gain_10));
 	if(ret < 0)
 		return ret;
+
+	if(last_capture_mode == 0)	
+		ret = py480_change_mode(frame_rate,py480_mode_808x608);
+	else if(last_capture_mode == 1)
+		ret = py480_change_mode(frame_rate,py480_mode_640x480);
+	else if(last_capture_mode == 2)
+		ret = py480_change_mode(frame_rate,py480_mode_320x240);
 	
-	ret = py480_change_mode(frame_rate,py480_mode_808x608);
 	if(ret < 0)
 		return ret;
+
 	/*Enable sequencer*/
 	pllreg = 192;
 	regval = 0x0801;
