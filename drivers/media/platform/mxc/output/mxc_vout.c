@@ -1245,7 +1245,13 @@ static int mxc_vout_try_task(struct mxc_vout_output *vout)
 		crop->h -= crop->h % 8;
 	}
 	/* assume task.output already set by S_CROP */
-	vout->linear_bypass_pp = is_pp_bypass(vout);
+	/*for pollux4 qvga display in lcd*/
+       if( (vout->task.input.crop.w == vout->task.output.crop.w) &&
+               (vout->task.input.crop.h == vout->task.output.crop.h))
+               vout->linear_bypass_pp = 0;
+       else
+               vout->linear_bypass_pp = is_pp_bypass(vout);
+
 	if (vout->linear_bypass_pp) {
 		v4l2_info(vout->vfd->v4l2_dev, "Bypass IC.\n");
 		output->format = input->format;
