@@ -308,8 +308,6 @@ static int fb_hx8347g_suspend(struct device *dev)
 {
 
 	printk("%s\n",__func__);
-	/* power off lvds chip */
-	gpio_set_value(pwdn_gpio,0);
 	/*display off setting */
 	write_reg(fb_hx8347g_data, 0x28, 0x38);//GON=1, DTE=1, D=1000
 	mdelay(40);
@@ -319,6 +317,9 @@ static int fb_hx8347g_suspend(struct device *dev)
 	mdelay(5);
 	/*oscillator disable*/
 	write_reg(fb_hx8347g_data, 0x19, 0x00); /* start osc OSC_EN=0 */
+	/* power off lvds chip */
+	mdelay(1);
+	gpio_set_value(pwdn_gpio,0);
 
 	return 0;
 }
@@ -328,9 +329,6 @@ static int fb_hx8347g_sysfs_suspend(bool state)
 
 	if(state == 1)
 	{
-		/* power off lvds chip */
-		gpio_set_value(pwdn_gpio,0);
-		printk("%s\n",__func__);
 		/*display off setting */
 		write_reg(fb_hx8347g_data, 0x28, 0x38);//GON=1, DTE=1, D=1000
 		mdelay(40);
@@ -340,12 +338,16 @@ static int fb_hx8347g_sysfs_suspend(bool state)
 		mdelay(5);
 		/*oscillator disable*/
 		write_reg(fb_hx8347g_data, 0x19, 0x00); /* start osc OSC_EN=0 */
+		/* power off lvds chip */
+		mdelay(1);
+		gpio_set_value(pwdn_gpio,0);
+		printk("display suspending\n");
 	}
 	else if(state == 0)
 	{
 		/* power on lvds chip */
 		gpio_set_value(pwdn_gpio,1);
-		printk("%s\n",__func__);
+		mdelay(1);
 		/* power on */
 		write_reg(fb_hx8347g_data, 0x18, 0x36);//RADJ 70HZ
 		write_reg(fb_hx8347g_data, 0x19, 0x01); /* start osc OSC_EN=1 */
@@ -362,6 +364,7 @@ static int fb_hx8347g_sysfs_suspend(bool state)
 		write_reg(fb_hx8347g_data, 0x28, 0x38);//GON=1, DTE=1, D=1000
 		mdelay(40);
 		write_reg(fb_hx8347g_data, 0x28, 0x3C);//GON=1, DTE=1, D=1100
+		printk("display resuming\n");
 
 	}
 	return 0;
@@ -372,6 +375,7 @@ static int fb_hx8347g_resume(struct device *dev)
 	printk("%s\n",__func__);
 	/* power on lvds chip */
 	gpio_set_value(pwdn_gpio,1);
+	mdelay(1);
 
 	/* power on */
 	write_reg(fb_hx8347g_data, 0x18, 0x36);//RADJ 70HZ
