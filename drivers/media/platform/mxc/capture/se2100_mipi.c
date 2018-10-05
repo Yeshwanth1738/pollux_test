@@ -377,7 +377,7 @@ static int barcode_resume(void)
 	int retval = 0;
 	struct reg_value *pModeSetting = NULL;
 	
-	printk(KERN_INFO"resumeeeeee\n");
+	//printk(KERN_INFO"resumeeeeee\n");
 
 	pModeSetting = se2100_barcode;
 	ArySize = ARRAY_SIZE(se2100_barcode);
@@ -390,7 +390,7 @@ static int barcode_resume(void)
 static int barcode_suspend(void)
 {
 	int retval = 0;
-	printk(KERN_INFO"suspendinggggg\n");
+	//printk(KERN_INFO"suspendinggggg\n");
 	gpio_set_value(pwdn_gpio,0);
 	udelay(10);
 	retval = se2100_write_reg(0x09, 0x81);  //enabling suspend mode
@@ -410,9 +410,9 @@ static int barcode_suspend(void)
 static int ioctl_s_power(struct v4l2_int_device *s, int on)
 {
 	struct sensor_data *sensor = s->priv;
-
+	
 	sensor->on = on;		
-	printk("in %s\n",__func__);
+	//printk("in %s\n",__func__);
 	return 0;
 }
 
@@ -428,7 +428,7 @@ static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
     struct sensor_data *sensor = s->priv;
     struct v4l2_captureparm *cparm = &a->parm.capture;
     int ret = 0;
-printk(KERN_INFO" %s entereedddd \n" , __func__);
+	//printk(KERN_INFO" %s entereedddd \n" , __func__);
 
     switch (a->type) {
         /* This is the only case currently handled. */
@@ -473,16 +473,13 @@ printk(KERN_INFO" %s entereedddd \n" , __func__);
 static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 {
     int ret = 0;
-printk(KERN_INFO" %s entereedddd \n" , __func__);
+	//printk(KERN_INFO" %s entereedddd \n" , __func__);
 
     switch (a->type) {
         /* This is the only case currently handled. */
         case V4L2_BUF_TYPE_VIDEO_CAPTURE:
-            //ret = ar0330_init_mode((u32)a->parm.capture.capturemode);
-	//ret = barcode_resume(); 
-          //  if(ret < 0)
-            //    return ret;
-            break;
+
+             break;
 
             /* These are all the possible cases. */
         case V4L2_BUF_TYPE_VIDEO_OUTPUT:
@@ -519,7 +516,7 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s,
 			  struct v4l2_format *f)
 {
     struct sensor_data *sensor = s->priv;
-printk(KERN_INFO" %s entereedddd \n" , __func__);
+	//printk(KERN_INFO" %s entereedddd \n" , __func__);
 
     f->fmt.pix.pixelformat =se2100_data.pix.pixelformat ;
     f->fmt.pix.width = se2100_data.pix.width;
@@ -532,7 +529,7 @@ printk(KERN_INFO" %s entereedddd \n" , __func__);
 static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 {
 	
-printk(KERN_INFO" %s entereedddd \n" , __func__);
+	//printk(KERN_INFO" %s entereedddd \n" , __func__);
     if (s == NULL) {
         pr_err("   ERROR!! no slave device set!\n");
         return -1;
@@ -556,7 +553,7 @@ printk(KERN_INFO" %s entereedddd \n" , __func__);
  */
 static int ioctl_init(struct v4l2_int_device *s)
 {
-printk(KERN_INFO" %s entereedddd \n" , __func__);
+	//printk(KERN_INFO" %s entereedddd \n" , __func__);
 
     return 0;
 }
@@ -582,7 +579,7 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 	gpio_set_value(pwdn_gpio,0);
 
 	struct mipi_csi2_info *mipi_csi2_info;
-printk(KERN_INFO" %s entereedddd \n" , __func__);
+	//printk(KERN_INFO" %s entereedddd \n" , __func__);
 
 	se2100_data.on = true;
 
@@ -618,8 +615,7 @@ printk(KERN_INFO" %s entereedddd \n" , __func__);
 	lanes = mipi_csi2_set_lanes(mipi_csi2_info);
 	mipi_csi2_reset(mipi_csi2_info);
 //	laa = mipi_csi2_read(mipi_csi2_info, MIPI_CSI2_N_LANES);
-	printk(KERN_ERR "%s() in %s: number of mipi lanes %d\n",
-				__func__, __FILE__, (lanes + 1));
+	//printk(KERN_ERR "%s() in %s: number of mipi lanes %d\n",__func__, __FILE__, (lanes + 1));
 
 	if ((lanes + 1) != 1) {
 		printk(KERN_ERR "%s() in %s: Unsupported, number of mipi lanes %d\n",
@@ -627,13 +623,13 @@ printk(KERN_INFO" %s entereedddd \n" , __func__);
 		return -1;
 	}
 
-	if (se2100_data.pix.pixelformat == V4L2_PIX_FMT_UYVY) {
+	if (se2100_data.pix.pixelformat == V4L2_PIX_FMT_UYVY ) {
 		mipi_csi2_set_datatype(mipi_csi2_info, MIPI_DT_YUV422);
 	} else
 		pr_err("currently this sensor format can not be supported!\n");
 
-	ret = barcode_resume(); 
-	msleep(5);
+//	ret = barcode_resume();//zebra changes 
+//	msleep(5);
 
 	if (mipi_csi2_info) {
 		unsigned int i = 0;
@@ -642,14 +638,14 @@ printk(KERN_INFO" %s entereedddd \n" , __func__);
 		mipi_reg = mipi_csi2_dphy_status(mipi_csi2_info);
 		mipi_reg_err1= mipi_csi2_get_error1(mipi_csi2_info);
 		mipi_reg_err2= mipi_csi2_get_error2(mipi_csi2_info);
-		pr_err("mipi csi2 reg vals-------- phy_status: %x  err1: %x   err2: %x\n",mipi_reg, mipi_reg_err1, mipi_reg_err2);
+		//pr_err("mipi csi2 reg vals-------- phy_status: %x  err1: %x   err2: %x\n",mipi_reg, mipi_reg_err1, mipi_reg_err2);
 
-		while ((mipi_reg == 0x200) && (i <= 100)) {
+		while ((mipi_reg == 0x200) && (i <= 10)) {
 			mipi_reg = mipi_csi2_dphy_status(mipi_csi2_info);
 			i++;
 			msleep(10);
 		}
-		if (i >= 100) {
+		if (i >= 10) {
 			pr_err("mipi csi2 can not receive sensor clk!\n");
 			return -1;
 		}
@@ -685,7 +681,7 @@ static int ioctl_dev_exit(struct v4l2_int_device *s)
 {
     void *mipi_csi2_info;
 
-printk(KERN_INFO" %s entereedddd \n" , __func__);
+	//printk(KERN_INFO" %s entereedddd \n" , __func__);
     mipi_csi2_info = mipi_csi2_get_info();
 
     /* disable mipi csi2 */
@@ -708,38 +704,27 @@ printk(KERN_INFO" %s entereedddd \n" , __func__);
  */
 static int ioctl_s_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 {
-//	struct sensor_data *sensor = s->priv;
+	struct sensor_data *sensor = s->priv;
 	u32 format = f->fmt.pix.pixelformat;
 	int  ret = 0;
 	//u16 data;
 	u16 mipi_dt_id;
-printk(KERN_INFO" %s entereedddd \n" , __func__);
-
-	//ar0330_read_16b_reg(0x2016, &mipi_dt_id);
-	//mipi_dt_id &= 0xFFE0;
+	//printk(KERN_INFO" %s entereedddd \n" , __func__);
+	
 
 	switch (format) {
-	case V4L2_PIX_FMT_UYVY:
-	//	ar0330_write_16b_reg(0x2012, 0x0030);
-		printk(KERN_DEBUG"format uyvy\n");
-printk(KERN_INFO" %s fmt uyvy \n" , __func__);
-		se2100_data.pix.pixelformat = format;
-	//	mipi_dt_id |= 0x001E;
-	  //      ar0330_write_16b_reg(0x2016, mipi_dt_id);
+	case V4L2_PIX_FMT_UYVY:			
+	case V4L2_PIX_FMT_YUYV:			
+	case V4L2_PIX_FMT_YUV420:
+	case V4L2_PIX_FMT_GREY:
+			se2100_data.pix.pixelformat = format;
 	break;
-//FIXME: Yet to be tested
-#if 0
-	case V4L2_PIX_FMT_JPEG:
-		ar1820_write_16b_reg(0x2012, 0x0001);
-		ar1820_data.pix.pixelformat = format;
-		mipi_dt_id |= 0x001e;			// FIXME: MIPI identifier (0x12 - jpeg) is not working, so we used 0x1E - YUV currently.
-	        ar0330_write_16b_reg(0x2016, mipi_dt_id);
-	break;
-#endif
+
+
 	default:
-printk(KERN_INFO" %s fmt not support \n" , __func__);
+		printk(KERN_INFO" %d fmt not support \n" ,format);
 		pr_debug("case not supported\n");
-		break;
+		return -EINVAL;
 	}
 
 	return ret;
@@ -755,7 +740,7 @@ printk(KERN_INFO" %s fmt not support \n" , __func__);
 static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
 			     struct v4l2_fmtdesc *fmt)
 {
-	printk(KERN_INFO" %s entereedddd \n" , __func__);
+	//printk(KERN_INFO" %s entereedddd \n" , __func__);
 	
 	switch (fmt->type) {
 		case V4L2_BUF_TYPE_VIDEO_CAPTURE:
@@ -784,16 +769,46 @@ static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
 static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 				 struct v4l2_frmsizeenum *fsize)
 {
-	printk(KERN_INFO" %s entereedddd \n" , __func__);
+	//printk(KERN_INFO" %s entereedddd \n" , __func__);
 	if (fsize->index > SE2100_MODE_MAX)
 		return -EINVAL;
-	if (1)//fsize->pixel_format == ar0330_data.pix.pixelformat)
+	if (1)
 	{
 		fsize->type=V4L2_FRMSIZE_TYPE_DISCRETE;
 		fsize->discrete.width = se2100_frmsizes[fsize->index].width;
 		fsize->discrete.height = se2100_frmsizes[fsize->index].height;
 		return 0;
 	}
+}
+
+
+/*!
+ * ioctl_enum_frameintervals - V4L2 sensor interface handler for
+ *			       VIDIOC_ENUM_FRAMEINTERVALS ioctl
+ * @s: pointer to standard V4L2 device structure
+ * @fival: standard V4L2 VIDIOC_ENUM_FRAMEINTERVALS ioctl structure
+ *
+ * Return 0 if successful, otherwise -EINVAL.
+ */
+static int ioctl_enum_frameintervals(struct v4l2_int_device *s,
+					 struct v4l2_frmivalenum *fival)
+{
+	int i, j, count;
+	//printk(KERN_INFO" %s entereedddd \n" , __func__);
+
+	if (fival->index < 0 )
+		return -EINVAL;
+
+	if (fival->pixel_format == 0 || fival->width == 0 || fival->height == 0) {
+		pr_warning("Please assign pixelformat, width and height.\n");
+		return -EINVAL;
+	}
+
+	fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+	fival->discrete.numerator = 1;
+	fival->discrete.denominator =30;
+	return 0;
+	
 }
 
 /*!
@@ -810,6 +825,8 @@ static struct v4l2_int_ioctl_desc se2100_ioctl_desc[] = {
     {vidioc_int_enum_fmt_cap_num, (v4l2_int_ioctl_func*) ioctl_enum_fmt_cap},
     {vidioc_int_enum_framesizes_num,  (v4l2_int_ioctl_func *) ioctl_enum_framesizes},
 
+    { vidioc_int_enum_frameintervals_num, (v4l2_int_ioctl_func *)ioctl_enum_frameintervals },
+
     {vidioc_int_g_fmt_cap_num, (v4l2_int_ioctl_func *) ioctl_g_fmt_cap},
     {vidioc_int_s_fmt_cap_num, (v4l2_int_ioctl_func *) ioctl_s_fmt_cap},
   
@@ -817,21 +834,7 @@ static struct v4l2_int_ioctl_desc se2100_ioctl_desc[] = {
     {vidioc_int_s_parm_num, (v4l2_int_ioctl_func *) ioctl_s_parm},
 
 };
-/*
-static int se2100_subdev_video_ops(struct v4l2_subdev *sd, int enable){
-	int retval;
-	if (enable)
-		retval = barcode_resume();
-	else
-		retval = barcode_suspend();
-	return retval;
 
-}
-static struct v4l2_subdev_ops se2100_subdev_ops = {
-	.video	= se2100_subdev_video_ops,
-
-};
-*/
 static struct v4l2_int_slave se2100_slave = {
     .ioctls = se2100_ioctl_desc,
     .num_ioctls = ARRAY_SIZE(se2100_ioctl_desc),
@@ -849,7 +852,7 @@ static struct v4l2_int_device se2100_int_device = {
 
 static int se2100_misc_open(struct inode* pINode, struct file* pFile)
 {
-	printk("se2100_misc_open \n");
+	//printk("se2100_misc_open \n");
 	if (atomic_inc_return(&se2100_data.open_excl) != 1 )
 	{
 		atomic_dec(&se2100_data.open_excl);
@@ -862,7 +865,7 @@ static int se2100_misc_open(struct inode* pINode, struct file* pFile)
 
 static int se2100_misc_release(struct inode* node, struct file* file)
 {
-	printk("se2100_misc_release \n");
+	//printk("se2100_misc_release \n");
 	atomic_dec(&se2100_data.open_excl);
 	return(0);
 }
@@ -906,10 +909,7 @@ static long se2100_misc_ioctl(struct file* file, unsigned int cmd, unsigned long
 	}	
 
 
-	//printk("msg.addr =0x%x\n",msg.addr);
-	//printk("msg.len=%d\n",msg.len);
-	//msg.addr= 0x6e;
-	// Only allow transfers to the SE2100, limit the size of the message and don't allow received length changes
+		// Only allow transfers to the SE2100, limit the size of the message and don't allow received length changes
 /*	if ( (msg.addr != SE2100_I2C_DEVICE_ADDR) || (msg.len > 256) || (msg.flags & I2C_M_RECV_LEN) ) {
 		printk(KERN_INFO"se2100_misc_ioctl - false 5\n");
 		return -EINVAL;
@@ -962,7 +962,7 @@ static struct miscdevice se2100_misc_device =
 static int se2100_suspend(struct device *dev)
 {
 	int retval = 0;
-	printk(KERN_INFO"suspendinggggg\n");
+	//printk(KERN_INFO"suspendinggggg\n");
 	gpio_set_value(pwdn_gpio,0);
 	udelay(10);
 	retval = se2100_write_reg(0x09, 0x81);  //enabling suspend mode
@@ -973,7 +973,8 @@ static int se2100_suspend(struct device *dev)
 	udelay(10);
 	gpio_set_value(pwr_en_gpio,0);
 	udelay(10);
-	return retval;
+	//return retval;
+	return 0;
 
 }
 
@@ -989,7 +990,8 @@ static int se2100_resume(struct device *dev)
 	udelay(10);
 	reset_regs();
 	ret=barcode_resume();
-	return ret;
+	//return ret;
+	return 0;
 }
 
 static int se2100_probe(struct i2c_client *client, const struct i2c_device_id *device_id)
@@ -1088,15 +1090,13 @@ static int se2100_probe(struct i2c_client *client, const struct i2c_device_id *d
     	se2100_data.streamcap.timeperframe.numerator = 1;
 
 	gpio_set_value(pwdn_gpio,0);
-	reset_regs();
+	msleep(1);
 
-	    //if (se2100_read_reg(0x0000, 0x6E) < 0) {
-	     //   dev_err(dev, "se2100_mipi h/w module is not present\n");
-	        //goto power_off;
-	   // }
-	//barcode_resume();
-	//	v4l2_i2c_subdev_init(&se2100_data.subdev, client, &se2100_subdev_ops);
-	//	retval = v4l2_async_register_subdev(&se2100_data.subdev);
+	reset_regs();
+	printk("Camera-se2100 register loading started\n");
+	retval = barcode_resume();//zebra changes 
+	printk("Camera-se2100 register loading finished\n");
+	msleep(5);
 
 	clk_disable_unprepare(se2100_data.sensor_clk);
 	se2100_int_device.priv = &se2100_data;
@@ -1113,8 +1113,6 @@ static int se2100_probe(struct i2c_client *client, const struct i2c_device_id *d
 }
 static int se2100_remove(struct i2c_client *client)
 {
-//	struct v4l2_subdev *sd = i2c_get_clientdata(client);
-//	v4l2_async_unregister_subdev(sd);
 
 	int retval;
 	retval = barcode_suspend();
@@ -1150,43 +1148,8 @@ static struct i2c_driver se2100_i2c_driver = {
 
 
 module_i2c_driver(se2100_i2c_driver);
-#if 0
-/*!
- * se2100 init function
- * Called by insmod se2100_camera_mipi.ko
- *
- * @return  Error code indicating success or failure
- */
-static __init int se2100_init(void)
-{
-    u8 err;
-    err = i2c_add_driver(&se2100_i2c_driver);
-    if (err != 0)
-        pr_err("%s:driver registration failed, error=%d\n",
-                __func__, err);
-    
-	printk(KERN_INFO" return value %d \n", err);
-	
-	return err;
-}
 
-/*!
- * se2100 cleanup function
- * Called on rmmod se2100_camera_mipi.ko
- *
- * @return  Error code indicating success or failure
- */
-static void __exit se2100_clean(void)
-{
-    i2c_del_driver(&se2100_i2c_driver);
-}
-
-module_init(se2100_init);
-module_exit(se2100_clean);
-
-#endif
-
-MODULE_AUTHOR("Freescale Semiconductor, Inc.");
+MODULE_AUTHOR("E-consystems pvt ltd");
 MODULE_DESCRIPTION("se2100 MIPI Camera Driver");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("1.0");
