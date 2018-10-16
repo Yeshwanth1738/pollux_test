@@ -43,6 +43,9 @@
 #include <linux/fsl_devices.h>
 #include "mxc_v4l2_capture.h"
 #include "ipu_prp_sw.h"
+#include <linux/gpio.h>
+
+#define SOM_MCU_GPIO1 149 
 
 #define init_MUTEX(sem)         sema_init(sem, 1)
 
@@ -2621,6 +2624,11 @@ static long mxc_v4l_do_ioctl(struct file *file,
 
 		down(&cam->param_lock);
 		if (buf->memory & V4L2_MEMORY_USERPTR) {
+			/*pollux4 white LED interrupt*/
+			gpio_request(SOM_MCU_GPIO1, "WH1");
+			gpio_direction_output(SOM_MCU_GPIO1, 1);
+			gpio_free(SOM_MCU_GPIO1);
+
 			mxc_v4l2_release_bufs(cam);
 			retval = mxc_v4l2_prepare_bufs(cam, buf);
 		}
@@ -2678,6 +2686,13 @@ static long mxc_v4l_do_ioctl(struct file *file,
 			(file->f_flags & O_NONBLOCK)) {
 			retval = -EAGAIN;
 			break;
+		}
+
+		if (buf->memory & V4L2_MEMORY_USERPTR) {
+			/*pollux4 white LED interrupt*/
+			gpio_request(SOM_MCU_GPIO1, "WH1");
+			gpio_direction_output(SOM_MCU_GPIO1, 0);
+			gpio_free(SOM_MCU_GPIO1);
 		}
 
 		retval = mxc_v4l_dqueue(cam, buf);
