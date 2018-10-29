@@ -288,7 +288,8 @@
 		#size-cells = <0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_keypad>;
-		autorepeat;
+		/*Removed autorepeat to enable long press of the keys without release event*/
+		//autorepeat;
 	
 		key_up {
 			label = "Key UP";

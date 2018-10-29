@@ -2624,7 +2624,10 @@ static long mxc_v4l_do_ioctl(struct file *file,
 
 		down(&cam->param_lock);
 		if (buf->memory & V4L2_MEMORY_USERPTR) {
-			/*pollux4 white LED interrupt*/
+			/*pollux4 MCU interrupt high for changing the PWM values in PWM lookup table, 
+			*where toggling the gpio in library couldn't able to handle due to fps loss 
+			*issue caused by system calls
+			*/
 			gpio_request(SOM_MCU_GPIO1, "WH1");
 			gpio_direction_output(SOM_MCU_GPIO1, 1);
 			gpio_free(SOM_MCU_GPIO1);
@@ -2672,6 +2675,17 @@ static long mxc_v4l_do_ioctl(struct file *file,
 
 		buf->flags = cam->frame[index].buffer.flags;
 		spin_unlock_irqrestore(&cam->queue_int_lock, lock_flags);
+
+		/*pollux4 MCU interrupt low for changing the PWM values in PWM lookup table, 
+		*where toggling the gpio in library couldn't able to handle due to fps loss 
+		*issue caused by system calls
+		*/
+		if (buf->memory & V4L2_MEMORY_USERPTR) {
+		       	gpio_request(SOM_MCU_GPIO1, "WH1");
+			gpio_direction_output(SOM_MCU_GPIO1, 0);
+			gpio_free(SOM_MCU_GPIO1);
+		}
+		
 		break;
 	}
 
@@ -2687,14 +2701,6 @@ static long mxc_v4l_do_ioctl(struct file *file,
 			retval = -EAGAIN;
 			break;
 		}
-
-		if (buf->memory & V4L2_MEMORY_USERPTR) {
-			/*pollux4 white LED interrupt*/
-			gpio_request(SOM_MCU_GPIO1, "WH1");
-			gpio_direction_output(SOM_MCU_GPIO1, 0);
-			gpio_free(SOM_MCU_GPIO1);
-		}
-
 		retval = mxc_v4l_dqueue(cam, buf);
 		break;
 	}
