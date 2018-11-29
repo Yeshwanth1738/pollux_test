@@ -84,6 +84,9 @@ static const struct of_device_id mxc_v4l2_dt_ids[] = {
 MODULE_DEVICE_TABLE(of, mxc_v4l2_dt_ids);
 
 static int video_nr = -1;
+/*for three dummy buffers need to be skipped at starting for pwm synchronization*/
+static int dummy_buffers_finished = 0;
+static int dummy_buffers = 0;
 
 /*! This data is used for the output to the display. */
 #define MXC_V4L2_CAPTURE_NUM_OUTPUTS	6
@@ -532,6 +535,10 @@ static int mxc_streamoff(cam_data *cam)
 				return err;
 		}
 	}
+
+	/*for three dummy buffers need to be skipped at starting for pwm synchronization*/
+	dummy_buffers_finished = 0;
+	dummy_buffers = 0;
 
 	mxc_free_frames(cam);
 	mxc_capture_inputs[cam->current_input].status |= V4L2_IN_ST_NO_POWER;
@@ -2624,13 +2631,23 @@ static long mxc_v4l_do_ioctl(struct file *file,
 
 		down(&cam->param_lock);
 		if (buf->memory & V4L2_MEMORY_USERPTR) {
-			/*pollux4 MCU interrupt high for changing the PWM values in PWM lookup table, 
-			*where toggling the gpio in library couldn't able to handle due to fps loss 
+			/*pollux4 MCU interrupt high for changing the PWM values in PWM lookup table,
+			*where toggling the gpio in library couldn't able to handle due to fps loss
 			*issue caused by system calls
 			*/
-			gpio_request(SOM_MCU_GPIO1, "WH1");
-			gpio_direction_output(SOM_MCU_GPIO1, 1);
-			gpio_free(SOM_MCU_GPIO1);
+			if(dummy_buffers_finished)
+			{
+				gpio_request(SOM_MCU_GPIO1, "WH1");
+				gpio_direction_output(SOM_MCU_GPIO1, 1);
+				gpio_free(SOM_MCU_GPIO1);
+			}
+			else
+			{
+			/*avoid gpio toggling for three buffers*/
+				dummy_buffers++;
+				if(dummy_buffers == 3)
+					dummy_buffers_finished = 1;
+			}
 
 			mxc_v4l2_release_bufs(cam);
 			retval = mxc_v4l2_prepare_bufs(cam, buf);
@@ -2676,16 +2693,6 @@ static long mxc_v4l_do_ioctl(struct file *file,
 		buf->flags = cam->frame[index].buffer.flags;
 		spin_unlock_irqrestore(&cam->queue_int_lock, lock_flags);
 
-		/*pollux4 MCU interrupt low for changing the PWM values in PWM lookup table, 
-		*where toggling the gpio in library couldn't able to handle due to fps loss 
-		*issue caused by system calls
-		*/
-		if (buf->memory & V4L2_MEMORY_USERPTR) {
-		       	gpio_request(SOM_MCU_GPIO1, "WH1");
-			gpio_direction_output(SOM_MCU_GPIO1, 0);
-			gpio_free(SOM_MCU_GPIO1);
-		}
-		
 		break;
 	}
 
@@ -2702,6 +2709,21 @@ static long mxc_v4l_do_ioctl(struct file *file,
 			break;
 		}
 		retval = mxc_v4l_dqueue(cam, buf);
+
+		/*pollux4 MCU interrupt low for changing the PWM values in PWM lookup table,
+		*where toggling the gpio in library couldn't able to handle due to fps loss
+		*issue caused by system calls
+		*/
+
+		if (buf->memory & V4L2_MEMORY_USERPTR) {
+			/*avoid gpio toggling for three buffers*/
+			if(dummy_buffers_finished)
+			{
+				gpio_request(SOM_MCU_GPIO1, "WH1");
+				gpio_direction_output(SOM_MCU_GPIO1, 0);
+				gpio_free(SOM_MCU_GPIO1);
+			}
+		}
 		break;
 	}
 
