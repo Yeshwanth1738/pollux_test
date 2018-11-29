@@ -57,7 +57,7 @@ struct reg_value py480_required_register_uploads[]= {
 	{112, 0x0007}, //for CMOS mode
 	{128, 0x470A},
 	{129, 0x8001},
-	{130, 0x0001},
+	{130, 0x0000},//value(bl_line_valid_disable) changed to avoid bl_line before vsync and default is 0x0001 bl_line_valid_enable
 	{192, 0x0801},
 	{194, 0x03E4}, //reverse x and y enabled for demo kit compatibility
 	{197, 0x030A},
@@ -182,16 +182,18 @@ struct reg_value py480_reso_808x608_60[] = {
 };
 
 struct reg_value py480_reso_640x480_60[] = {
-	{256, 0xB415},	// ROI0 X config
-	{257, 0x860F},	// ROI0 Y config
+	/*changed register value for center ROI*/
+	{256, 0xB718},	// ROI0 X config
+	{257, 0x850E},	// ROI0 Y config
 	{199, 0x0514},	// Mult timer 0
 	{201, 0x01F4}	// Exposure 0
 
 };
 
 struct reg_value py480_reso_320x240_60[] = {
-	{256, 0x4F00},	// ROI0 X config
-	{257, 0x3B00},	// ROI0 Y config
+	/*changed register value for center ROI*/
+	{256, 0x8C3D},	// ROI0 X config
+	{257, 0x692E},	// ROI0 Y config
 	{199, 0x0514},	// Mult timer 0
 	{201, 0x01F4}	// Exposure 0
 };
@@ -204,22 +206,25 @@ struct reg_value py480_reso_808x608_30[] = {
 };
 
 struct reg_value py480_reso_640x480_30[] = {
-	{256, 0xB415},	// ROI0 X config
-	{257, 0x860F},	// ROI0 Y config
-	{199, 0x05B4},	// Mult timer 0
-	{201, 0x05E6}	// Exposure 0
+	/*changed register value for center ROI*/
+	{256, 0xB718},	// ROI0 X config
+	{257, 0x850E},	// ROI0 Y config
+	{199, 0x0a28},	// Mult timer 0
+	{201, 0x01f4}	// Exposure 0
 };
 
 struct reg_value py480_reso_320x240_30[] = {
-	{256, 0x4F00},	// ROI0 X config
-	{257, 0x3B00},	// ROI0 Y config
-	{199, 0x05B4},	// Mult timer 0
-	{201, 0x05E6}	// Exposure 0
+	/*changed register value for center ROI*/
+	{256, 0x8C3D},	// ROI0 X config
+	{257, 0x692E},	// ROI0 Y config
+	{199, 0x0a28},	// Mult timer 0
+	{201, 0x01f4}	// Exposure 0
 };
 
 struct reg_value py480_gain_10[] = {
-	{204, 0x01E4},	// AGAIN
-	{205, 0x0280},	// DGAIN
+	/*total gain 10*/
+	{204, 0x01E4},	// AGAIN - default analog gain 2
+	{205, 0x0280},	// DGAIN - default digital gain 5
 };
 
 struct reg_value py480_soft_power_up[] = {
