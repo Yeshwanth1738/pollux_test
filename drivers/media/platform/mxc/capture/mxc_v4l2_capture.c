@@ -2742,6 +2742,10 @@ static long mxc_v4l_do_ioctl(struct file *file,
 	case VIDIOC_STREAMOFF: {
 		pr_debug("   case VIDIOC_STREAMOFF\n");
 		retval = mxc_streamoff(cam);
+		printk("MCU-Sync: set gpio high\n");
+		gpio_request(SOM_MCU_GPIO1, "WH1");
+		gpio_direction_output(SOM_MCU_GPIO1, 1);
+		gpio_free(SOM_MCU_GPIO1);
 		break;
 	}
 
