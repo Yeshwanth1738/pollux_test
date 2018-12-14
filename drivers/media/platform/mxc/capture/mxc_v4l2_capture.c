@@ -85,7 +85,6 @@ MODULE_DEVICE_TABLE(of, mxc_v4l2_dt_ids);
 
 static int video_nr = -1;
 /*for three dummy buffers need to be skipped at starting for pwm synchronization*/
-static int dummy_buffers_finished = 0;
 static int dummy_buffers = 0;
 
 /*! This data is used for the output to the display. */
@@ -537,7 +536,6 @@ static int mxc_streamoff(cam_data *cam)
 	}
 
 	/*for three dummy buffers need to be skipped at starting for pwm synchronization*/
-	dummy_buffers_finished = 0;
 	dummy_buffers = 0;
 
 	mxc_free_frames(cam);
@@ -2635,7 +2633,7 @@ static long mxc_v4l_do_ioctl(struct file *file,
 			*where toggling the gpio in library couldn't able to handle due to fps loss
 			*issue caused by system calls
 			*/
-			if(dummy_buffers_finished)
+			if(dummy_buffers == 3)
 			{
 				gpio_request(SOM_MCU_GPIO1, "WH1");
 				gpio_direction_output(SOM_MCU_GPIO1, 1);
@@ -2645,8 +2643,6 @@ static long mxc_v4l_do_ioctl(struct file *file,
 			{
 			/*avoid gpio toggling for three buffers*/
 				dummy_buffers++;
-				if(dummy_buffers == 3)
-					dummy_buffers_finished = 1;
 			}
 
 			mxc_v4l2_release_bufs(cam);
@@ -2717,7 +2713,7 @@ static long mxc_v4l_do_ioctl(struct file *file,
 
 		if (buf->memory & V4L2_MEMORY_USERPTR) {
 			/*avoid gpio toggling for three buffers*/
-			if(dummy_buffers_finished)
+			if(dummy_buffers == 3)
 			{
 				gpio_request(SOM_MCU_GPIO1, "WH1");
 				gpio_direction_output(SOM_MCU_GPIO1, 0);
