@@ -801,6 +801,10 @@ config RTC_DRV_DS1511
 	  This driver can also be built as a module. If so, the module
 	  will be called rtc-ds1511.
 
+
+config RTC_DRV_RV8803
+       tristate "RTC Driver"
+
 config RTC_DRV_DS1553
 	tristate "Maxim/Dallas DS1553"
 	depends on HAS_IOMEM
