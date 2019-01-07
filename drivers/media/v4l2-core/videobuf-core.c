@@ -586,7 +586,7 @@ int videobuf_qbuf(struct videobuf_queue *q, struct v4l2_buffer *b)
 		buf->bsize = b->length;
 		if (b->length < buf->bsize) {
 			dprintk(1, "qbuf: buffer length is not enough\n");
-			printk("b->length=%d buf->size=%d\n",b->length,buf->size);
+			printk("b->length=%d buf->size=%d in condition\n",b->length,buf->bsize);
 			goto done;
 		}
 		if (VIDEOBUF_NEEDS_INIT != buf->state &&
