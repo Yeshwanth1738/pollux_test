@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 e-con Systems India Pvt Ltd, Inc. All Rights Reserved.
+ * Copyright (C) 2018 Neuroptics, Inc. All Rights Reserved.
  */
 
 /*
@@ -1610,7 +1610,7 @@ static int py480_remove(struct spi_device *spi)
 
 module_spi_driver(py480_spi_driver);
 
-MODULE_AUTHOR("e-con Systems India Pvt Ltd");
+MODULE_AUTHOR("Neuroptics");
 MODULE_DESCRIPTION("PHYTHON480 Camera Driver");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("1.0");

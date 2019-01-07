@@ -1,7 +1,7 @@
 /*
  *  Driver for Ring buffer and clip buffer reserved memory.
  *
- *  Copyright (C) E-consystem Pvt Ltd
+ *  Copyright (C)2017 Neuroptics
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@
 #include <linux/module.h>
 #include <linux/uaccess.h>
 
-MODULE_AUTHOR("E-consystems pvt ltd");
+MODULE_AUTHOR("Neuroptics");
 MODULE_DESCRIPTION("Ring buffer and clip buffer reserved memory driver");
 MODULE_LICENSE("GPL");
 

@@ -1,5 +1,5 @@
 /*
- * Copyright {C}, 2017 e-con Systems India Pvt Ltd, Inc. All Rights Reserved.
+ * Copyright {C}, 2017 Neuroptics. All Rights Reserved.
  */
 
 #ifndef PY480_REGSETTINGS_H

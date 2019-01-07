@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011-2015 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2017 Neuroptics. All Rights Reserved.
  */
 
 /*
@@ -1149,7 +1150,7 @@ static struct i2c_driver se2100_i2c_driver = {
 
 module_i2c_driver(se2100_i2c_driver);
 
-MODULE_AUTHOR("E-consystems pvt ltd");
+MODULE_AUTHOR("Neuroptics");
 MODULE_DESCRIPTION("se2100 MIPI Camera Driver");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("1.0");

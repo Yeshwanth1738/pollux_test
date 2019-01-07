@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2017 Neuroptics. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -579,5 +580,5 @@ static struct spi_driver fb_hx8347g_driver = {
 module_spi_driver(fb_hx8347g_driver);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("e-con Systems India Pvt Ltd");
+MODULE_AUTHOR("Neuroptics");
 MODULE_DESCRIPTION("SPI driver for HX8347G LCD Panel");
