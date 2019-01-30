@@ -51,6 +51,7 @@ static void __iomem *Clip_base,*Ring_base;
 #define Clip_SIZE	0x20000000UL
 
 
+extern int block_backlight_change;
 
 
 #ifndef ARCH_HAS_VALID_PHYS_ADDR_RANGE
@@ -227,11 +228,14 @@ static int __init clip_ring_init(void)
 	int retval;
 	int minor;
 
+	printk("blocking backlight change...\n");
+	block_backlight_change = 1;
 		printk("clip_ring: major number %d\n", major);
 	if (request_mem_region(Ring_START, Ring_SIZE, "ring") == NULL){
 		printk("request_mem_region ring busy\n");
 		return -EBUSY;
 	}
+
 
 	Ring_base = ioremap(Ring_START, Ring_SIZE);
 	if (Ring_base == NULL) {
