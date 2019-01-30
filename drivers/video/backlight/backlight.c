@@ -25,6 +25,8 @@ static struct list_head backlight_dev_list;
 static struct mutex backlight_dev_list_mutex;
 static struct blocking_notifier_head backlight_notifier;
 
+extern int block_backlight_change;
+
 static const char *const backlight_types[] = {
 	[BACKLIGHT_RAW] = "raw",
 	[BACKLIGHT_PLATFORM] = "platform",
@@ -156,6 +158,31 @@ static ssize_t bl_power_store(struct device *dev, struct device_attribute *attr,
 }
 static DEVICE_ATTR_RW(bl_power);
 
+static ssize_t block_change_show(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+	return sprintf(buf, "%d\n",block_backlight_change);
+}
+static ssize_t block_change_store(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	int rc;
+	unsigned long status;
+
+	rc = kstrtoul(buf, 0, &status);
+	printk("block_change : %d\n",status);
+	if (rc)
+		return rc;
+	if(status)
+		block_backlight_change = 1;
+	else
+		block_backlight_change = 0;
+
+	return count;
+}
+// /sys/class/backlight/backlight_lvds0/block_change
+static DEVICE_ATTR_RW(block_change);
+
 static ssize_t brightness_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -273,6 +300,7 @@ static void bl_device_release(struct device *dev)
 }
 
 static struct attribute *bl_device_attrs[] = {
+	&dev_attr_block_change.attr,
 	&dev_attr_bl_power.attr,
 	&dev_attr_brightness.attr,
 	&dev_attr_actual_brightness.attr,

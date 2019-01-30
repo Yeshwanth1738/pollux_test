@@ -20,6 +20,10 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 
+/*Set default value to zero to allow backlight changes during boot.
+ * It will be turned on by clip_ring driver's probe.
+ * */
+int block_backlight_change = 0 ;
 /* i.MX1 and i.MX21 share the same PWM function block: */
 
 #define MX1_PWMC			0x00   /* PWM Control Register */
@@ -67,6 +71,11 @@ static int imx_pwm_config_v1(struct pwm_chip *chip,
 {
 	struct imx_chip *imx = to_imx_chip(chip);
 
+	if(block_backlight_change)
+	{
+		printk("block backlight change\n");
+		return 0;
+	}
 	/*
 	 * The PWM subsystem allows for exact frequencies. However,
 	 * I cannot connect a scope on my device to the PWM line and
@@ -96,6 +105,11 @@ static void imx_pwm_set_enable_v1(struct pwm_chip *chip, bool enable)
 	struct imx_chip *imx = to_imx_chip(chip);
 	u32 val;
 
+	if(block_backlight_change)
+	{
+		printk("block backlight change: %s\n",__func__);
+		return 0;
+	}
 	val = readl(imx->mmio_base + MX1_PWMC);
 
 	if (enable)
@@ -109,6 +123,12 @@ static void imx_pwm_set_enable_v1(struct pwm_chip *chip, bool enable)
 static int imx_pwm_config_v2(struct pwm_chip *chip,
 		struct pwm_device *pwm, int duty_ns, int period_ns)
 {
+
+	if(block_backlight_change)
+	{
+		printk("block backlight change\n");
+		return 0;
+	}
 	struct imx_chip *imx = to_imx_chip(chip);
 	struct device *dev = chip->dev;
 	unsigned long long c;
@@ -186,6 +206,11 @@ static int imx_pwm_config_v2(struct pwm_chip *chip,
 
 static void imx_pwm_set_enable_v2(struct pwm_chip *chip, bool enable)
 {
+	if(block_backlight_change)
+	{
+		printk("block backlight change: %s\n",__func__);
+		return 0;
+	}
 	struct imx_chip *imx = to_imx_chip(chip);
 	u32 val;
 
@@ -202,6 +227,11 @@ static void imx_pwm_set_enable_v2(struct pwm_chip *chip, bool enable)
 static int imx_pwm_config(struct pwm_chip *chip,
 		struct pwm_device *pwm, int duty_ns, int period_ns)
 {
+	if(block_backlight_change)
+	{
+		printk("block backlight change\n");
+		return 0;
+	}
 	struct imx_chip *imx = to_imx_chip(chip);
 	int ret;
 
@@ -218,7 +248,11 @@ static int imx_pwm_config(struct pwm_chip *chip,
 
 static int imx_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
-	struct imx_chip *imx = to_imx_chip(chip);
+	if(block_backlight_change)
+	{
+		printk("block backlight change\n");
+		return 0;
+	}struct imx_chip *imx = to_imx_chip(chip);
 	int ret;
 
 	ret = clk_prepare_enable(imx->clk_per);
@@ -232,6 +266,11 @@ static int imx_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 
 static void imx_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
+	if(block_backlight_change)
+	{
+		printk("block backlight change\n");
+		return 0;
+	}
 	struct imx_chip *imx = to_imx_chip(chip);
 
 	imx->set_enable(chip, false);
@@ -277,6 +316,7 @@ static int imx_pwm_probe(struct platform_device *pdev)
 	struct imx_chip *imx;
 	struct resource *r;
 	int ret = 0;
+
 
 	if (!of_id)
 		return -ENODEV;
