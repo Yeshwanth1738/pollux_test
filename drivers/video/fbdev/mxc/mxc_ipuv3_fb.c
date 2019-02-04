@@ -78,7 +78,6 @@ struct mxcfb_info {
 	bool alpha_chan_en;
 	bool late_init;
 	bool first_set_par;
-	bool rotate_channel_enabled;
 	bool resolve;
 	bool prefetch;
 	bool on_the_fly;
@@ -95,11 +94,6 @@ struct mxcfb_info {
 	void *alpha_virt_addr0;
 	void *alpha_virt_addr1;
 	uint32_t alpha_mem_len;
-	dma_addr_t bg_phy_addr0;
-	dma_addr_t bg_phy_addr1;
-	void *bg_virt_addr0;
-	void *bg_virt_addr1;
-	uint32_t bg_mem_len;
 	uint32_t ipu_ch_irq;
 	uint32_t ipu_ch_nf_irq;
 	uint32_t ipu_alp_ch_irq;
@@ -421,7 +415,6 @@ static struct fb_info *found_registered_fb(ipu_channel_t ipu_ch, int ipu_id)
 }
 
 static irqreturn_t mxcfb_irq_handler(int irq, void *dev_id);
-static irqreturn_t mxcfb_rot_irq_handler(int irq, void *dev_id);
 static irqreturn_t mxcfb_nf_irq_handler(int irq, void *dev_id);
 static int mxcfb_blank(int blank, struct fb_info *info);
 static int mxcfb_map_video_memory(struct fb_info *fbi);
@@ -477,11 +470,8 @@ static int _setup_disp_channel1(struct fb_info *fbi)
 		if (mxc_fbi->alpha_chan_en)
 			params.mem_dp_bg_sync.alpha_chan_en = true;
 	}
-	if (ipu_init_channel(mxc_fbi->ipu, mxc_fbi->ipu_ch, &params) < 0) {
-		dev_err(fbi->device, "init ipu channel fail\n");
-		return -EINVAL;
-	}
-	ipu_init_channel(mxc_fbi->ipu, MEM_ROT_ENC_MEM, NULL);
+	ipu_init_channel(mxc_fbi->ipu, mxc_fbi->ipu_ch, &params);
+
 	return 0;
 }
 
@@ -490,13 +480,11 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	int retval = 0;
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)fbi->par;
 	int fb_stride, ipu_stride, bw = 0, bh = 0;
-	int rot_width, rot_height, rot_stride;
 	unsigned long base, ipu_base;
 	unsigned int fr_xoff, fr_yoff, fr_w, fr_h;
 	unsigned int prg_width;
 	struct ipu_pre_context pre;
 	bool post_pre_disable = false;
-	ipu_channel_t ipu_ch;
 
 	switch (fbi_to_pixfmt(fbi, true)) {
 	case IPU_PIX_FMT_YUV420P2:
@@ -514,10 +502,6 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	default:
 		fb_stride = fbi->fix.line_length;
 	}
-
-	rot_width = fbi->var.xres;
-	rot_height = fbi->var.yres;
-	rot_stride = fbi->var.yres;
 
 	base = fbi->fix.smem_start;
 	fr_xoff = fbi->var.xoffset;
@@ -546,11 +530,8 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 			bytes_per_pixel(fbi_to_pixfmt(fbi, true));
 	}
 
-	if (!mxc_fbi->on_the_fly) {
-		mxc_fbi->cur_ipu_buf =
-				( fbi->var.rotate > IPU_ROTATE_180 ) ? 1: 2;
-	}
-
+	if (!mxc_fbi->on_the_fly)
+		mxc_fbi->cur_ipu_buf = 2;
 	init_completion(&mxc_fbi->flip_complete);
 	/*
 	 * We don't need to wait for vsync at the first time
@@ -566,51 +547,6 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 		mxc_fbi->cur_ipu_alpha_buf = 1;
 		init_completion(&mxc_fbi->alpha_flip_complete);
 		complete(&mxc_fbi->alpha_flip_complete);
-	}
-
-	if(fbi->var.rotate > IPU_ROTATE_VERT_FLIP &&
-	   mxc_fbi->ipu_ch == MEM_BG_SYNC) {
-		if(fbi->var.rotate > IPU_ROTATE_180) {
-			rot_width = fbi->var.yres;
-			rot_height = fbi->var.xres;
-			rot_stride = fbi->var.xres;
-		}
-		fbi->var.accel_flags |= FB_ACCEL_DOUBLE_FLAG;
-		retval = ipu_init_channel_buffer(mxc_fbi->ipu,
-						 MEM_ROT_ENC_MEM,
-						 IPU_OUTPUT_BUFFER,
-						 fbi_to_pixfmt(fbi, true),
-						 rot_width, rot_height,
-						 rot_stride,
-						 IPU_ROTATE_NONE,
-						 mxc_fbi->bg_phy_addr0,
-						 mxc_fbi->bg_phy_addr1,
-						 0,
-						 0, 0);
-		if(retval) {
-			dev_err(fbi->device,
-				"ipu_init_channel_buffer error %d\n", retval);
-			return retval;
-		}
-		retval = ipu_init_channel_buffer(mxc_fbi->ipu,
-						 mxc_fbi->ipu_ch,
-						 IPU_INPUT_BUFFER,
-						 fbi_to_pixfmt(fbi, true),
-						 rot_width, rot_height,
-						 rot_stride,
-						 IPU_ROTATE_NONE,
-						 mxc_fbi->bg_phy_addr0,
-						 mxc_fbi->bg_phy_addr1,
-						 0,
-						 0, 0);
-		if(retval) {
-			dev_err(fbi->device,
-				"ipu_init_channel_buffer error %d\n", retval);
-			return retval;
-		}
-		ipu_ch = MEM_ROT_ENC_MEM;
-	} else {
-		ipu_ch = mxc_fbi->ipu_ch;
 	}
 
 	if (mxc_fbi->prefetch) {
@@ -958,7 +894,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 		}
 	} else if (!mxc_fbi->on_the_fly && !mxc_fbi->prefetch) {
 		retval = ipu_init_channel_buffer(mxc_fbi->ipu,
-						 ipu_ch, IPU_INPUT_BUFFER,
+						 mxc_fbi->ipu_ch, IPU_INPUT_BUFFER,
 						 mxc_fbi->on_the_fly ? mxc_fbi->final_pfmt :
 						 fbi_to_pixfmt(fbi, false),
 						 fbi->var.xres, fbi->var.yres,
@@ -976,7 +912,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 		}
 		/* update u/v offset */
 		if (!mxc_fbi->prefetch)
-			ipu_update_channel_offset(mxc_fbi->ipu, ipu_ch,
+			ipu_update_channel_offset(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 					IPU_INPUT_BUFFER,
 					fbi_to_pixfmt(fbi, true),
 					fr_w,
@@ -1000,8 +936,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 						 IPU_PIX_FMT_GENERIC,
 						 fbi->var.xres, fbi->var.yres,
 						 fbi->var.xres,
-						 (fbi->var.rotate > IPU_ROTATE_VERT_FLIP) ?
-						 IPU_ROTATE_NONE : fbi->var.rotate,
+						 fbi->var.rotate,
 						 mxc_fbi->alpha_phy_addr1,
 						 mxc_fbi->alpha_phy_addr0,
 						 0,
@@ -1244,27 +1179,7 @@ static int mxcfb_set_par(struct fb_info *fbi)
 	if (!on_the_fly) {
 		ipu_clear_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
 		ipu_disable_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
-		ipu_free_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq, fbi);
-		if (mxc_fbi->ipu_ch == MEM_BG_SYNC && fbi->var.rotate > IPU_ROTATE_VERT_FLIP) {
-			if (ipu_request_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq,
-						mxcfb_rot_irq_handler, 0, MXCFB_NAME, fbi) != 0) {
-				dev_err(fbi->device, "error registering eof irq handler.\n");
-			}
-		} else {
-			if (ipu_request_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq,
-				mxcfb_irq_handler, IPU_IRQF_ONESHOT, MXCFB_NAME, fbi) != 0) {
-				dev_err(fbi->device, "error registering eof irq handler.\n");
-			}
-		}
-		ipu_disable_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
 		ipu_clear_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_nf_irq);
-		if (mxc_fbi->ipu_ch == MEM_BG_SYNC) {
-			if (mxc_fbi->rotate_channel_enabled)
-				ipu_unlink_channels(mxc_fbi->ipu, MEM_ROT_ENC_MEM, mxc_fbi->ipu_ch);
-			mxc_fbi->rotate_channel_enabled = false;
-			ipu_disable_channel(mxc_fbi->ipu, MEM_ROT_ENC_MEM, true);
-			ipu_uninit_channel(mxc_fbi->ipu, MEM_ROT_ENC_MEM);
-		}
 		ipu_disable_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_nf_irq);
 		ipu_disable_channel(mxc_fbi->ipu, mxc_fbi->ipu_ch, true);
 		ipu_uninit_channel(mxc_fbi->ipu, mxc_fbi->ipu_ch);
@@ -1402,8 +1317,7 @@ static int mxcfb_set_par(struct fb_info *fbi)
 
 		if (ipu_init_sync_panel(mxc_fbi->ipu, mxc_fbi->ipu_di,
 					(PICOS2KHZ(fbi->var.pixclock)) * 1000UL,
-					(fbi->var.rotate > IPU_ROTATE_180) ? fbi->var.yres : fbi->var.xres,
-					(fbi->var.rotate > IPU_ROTATE_180) ? fbi->var.xres : fbi->var.yres,
+					fbi->var.xres, fbi->var.yres,
 					out_pixel_fmt,
 					fbi->var.left_margin,
 					fbi->var.hsync_len,
@@ -1442,23 +1356,6 @@ static int mxcfb_set_par(struct fb_info *fbi)
 			ipu_uninit_channel(mxc_fbi->ipu, mxc_fbi->ipu_ch);
 			return retval;
 		}
-	}
-
-	if (mxc_fbi->ipu_ch == MEM_BG_SYNC && fbi->var.rotate > IPU_ROTATE_VERT_FLIP) {
-		ipu_clear_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
-		ipu_enable_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
-		retval = ipu_link_channels(mxc_fbi->ipu, MEM_ROT_ENC_MEM, mxc_fbi->ipu_ch);
-		if (retval)
-			dev_err(fbi->device, "ipu_link_channel error %d\n", retval);
-		mxc_fbi->rotate_channel_enabled = true;
-		retval = ipu_enable_channel(mxc_fbi->ipu, MEM_ROT_ENC_MEM);
-		if (retval)
-			dev_err(fbi->device, "ipu_enable_channel error %d\n", retval);
-		mxc_fbi->cur_ipu_buf = 0;
-		ipu_select_buffer(mxc_fbi->ipu, MEM_ROT_ENC_MEM, IPU_INPUT_BUFFER, 0);
-		ipu_select_buffer(mxc_fbi->ipu, MEM_ROT_ENC_MEM, IPU_INPUT_BUFFER, 1);
-		ipu_select_buffer(mxc_fbi->ipu, MEM_ROT_ENC_MEM, IPU_OUTPUT_BUFFER, 0);
-		ipu_select_buffer(mxc_fbi->ipu, MEM_ROT_ENC_MEM, IPU_OUTPUT_BUFFER, 1);
 	}
 
 	if (!on_the_fly) {
@@ -1680,17 +1577,10 @@ static int mxcfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 
 		ipu_disp_get_window_pos(mxc_fbi->ipu, mxc_fbi->ipu_ch, &pos_x, &pos_y);
 
-		if (fbi_tmp->var.rotate >= IPU_ROTATE_90_RIGHT ) {
-			if ((var->xres + pos_x) > bg_yres)
-				var->xres = bg_yres - pos_x;
-			if ((var->yres + pos_y) > bg_xres)
-				var->yres = bg_xres - pos_y;
-		} else {
-			if ((var->xres + pos_x) > bg_xres)
-				var->xres = bg_xres - pos_x;
-			if ((var->yres + pos_y) > bg_yres)
-				var->yres = bg_yres - pos_y;
-		}
+		if ((var->xres + pos_x) > bg_xres)
+			var->xres = bg_xres - pos_x;
+		if ((var->yres + pos_y) > bg_yres)
+			var->yres = bg_yres - pos_y;
 
 		if (fbi_tmp->var.vmode & FB_VMODE_INTERLACED)
 			var->vmode |= FB_VMODE_INTERLACED;
@@ -1708,7 +1598,7 @@ static int mxcfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 				    fbi_tmp->var.yres - var->yres;
 	}
 
-	if (var->rotate > IPU_ROTATE_90_LEFT)
+	if (var->rotate > IPU_ROTATE_VERT_FLIP)
 		var->rotate = IPU_ROTATE_NONE;
 
 	if (var->xres_virtual < var->xres)
@@ -2474,7 +2364,6 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	int bw = 0, bh = 0;
 	int i;
 	int ret;
-	ipu_channel_t ipu_ch;
 
 	/* no pan display during fb blank */
 	if (mxc_fbi->ipu_ch == MEM_FG_SYNC) {
@@ -2631,13 +2520,8 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	}
 
 	if (!mxc_fbi->cur_prefetch) {
-		if (mxc_fbi->ipu_ch == MEM_BG_SYNC && info->var.rotate > IPU_ROTATE_VERT_FLIP) {
-			ipu_ch = MEM_ROT_ENC_MEM;
-		} else {
-			ipu_ch = mxc_fbi->ipu_ch;
-			++mxc_fbi->cur_ipu_buf;
-			mxc_fbi->cur_ipu_buf %= (info->var.rotate > IPU_ROTATE_180) ? 2 : 3;
-		}
+		++mxc_fbi->cur_ipu_buf;
+		mxc_fbi->cur_ipu_buf %= 3;
 		dev_dbg(info->device, "Updating SDC %s buf %d address=0x%08lX\n",
 			info->fix.id, mxc_fbi->cur_ipu_buf, base);
 	}
@@ -2646,9 +2530,8 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	if (mxc_fbi->cur_prefetch)
 		goto next;
 
-	if (ipu_update_channel_buffer(mxc_fbi->ipu, ipu_ch, IPU_INPUT_BUFFER,
-				      (info->var.rotate > IPU_ROTATE_180) ?
-				1 - mxc_fbi->cur_ipu_buf: mxc_fbi->cur_ipu_buf, ipu_base) == 0) {
+	if (ipu_update_channel_buffer(mxc_fbi->ipu, mxc_fbi->ipu_ch, IPU_INPUT_BUFFER,
+				      mxc_fbi->cur_ipu_buf, ipu_base) == 0) {
 next:
 		/* Update the DP local alpha buffer only for graphic plane */
 		if (loc_alpha_en && mxc_graphic_fbi == mxc_fbi &&
@@ -2663,7 +2546,7 @@ next:
 
 		/* update u/v offset */
 		if (!mxc_fbi->cur_prefetch) {
-			ipu_update_channel_offset(mxc_fbi->ipu, ipu_ch,
+			ipu_update_channel_offset(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 					IPU_INPUT_BUFFER,
 					fbi_to_pixfmt(info, true),
 					fr_w,
@@ -2672,10 +2555,9 @@ next:
 					0, 0,
 					fr_yoff,
 					fr_xoff);
-			if (ipu_ch != MEM_ROT_ENC_MEM) {
-				ipu_select_buffer(mxc_fbi->ipu, mxc_fbi->ipu_ch,
+
+			ipu_select_buffer(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 					  IPU_INPUT_BUFFER, mxc_fbi->cur_ipu_buf);
-			}
 		} else if (!ipu_pre_yres_is_small(info->var.yres)) {
 			ipu_pre_set_fb_buffer(mxc_fbi->pre_num,
 					      mxc_fbi->resolve,
@@ -2685,28 +2567,26 @@ next:
 					      mxc_fbi->sec_buf_off,
 					      mxc_fbi->trd_buf_off);
 		}
-		if (ipu_ch != MEM_ROT_ENC_MEM) {
-			ipu_clear_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
-			ipu_enable_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
-		}
+		ipu_clear_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
+		ipu_enable_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
 	} else {
 		dev_err(info->device,
 			"Error updating SDC buf %d to address=0x%08lX, "
 			"current buf %d, buf0 ready %d, buf1 ready %d, "
 			"buf2 ready %d\n", mxc_fbi->cur_ipu_buf, base,
-			ipu_get_cur_buffer_idx(mxc_fbi->ipu, ipu_ch,
+			ipu_get_cur_buffer_idx(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 					       IPU_INPUT_BUFFER),
-			ipu_check_buffer_ready(mxc_fbi->ipu, ipu_ch,
+			ipu_check_buffer_ready(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 					       IPU_INPUT_BUFFER, 0),
-			ipu_check_buffer_ready(mxc_fbi->ipu, ipu_ch,
+			ipu_check_buffer_ready(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 					       IPU_INPUT_BUFFER, 1),
-			ipu_check_buffer_ready(mxc_fbi->ipu, ipu_ch,
+			ipu_check_buffer_ready(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 					       IPU_INPUT_BUFFER, 2));
 		if (!mxc_fbi->cur_prefetch) {
 			++mxc_fbi->cur_ipu_buf;
-			mxc_fbi->cur_ipu_buf %= (info->var.rotate > IPU_ROTATE_180) ? 2 : 3;
+			mxc_fbi->cur_ipu_buf %= 3;
 			++mxc_fbi->cur_ipu_buf;
-			mxc_fbi->cur_ipu_buf %= (info->var.rotate > IPU_ROTATE_180) ? 2 : 3;
+			mxc_fbi->cur_ipu_buf %= 3;
 		}
 		mxc_fbi->cur_ipu_alpha_buf = !mxc_fbi->cur_ipu_alpha_buf;
 		ipu_clear_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
@@ -2851,18 +2731,6 @@ static irqreturn_t mxcfb_alpha_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t mxcfb_rot_irq_handler(int irq, void *dev_id)
-{
-	struct fb_info *fbi = dev_id;
-	struct mxcfb_info *mxc_fbi = fbi->par;
-
-	ipu_select_buffer(mxc_fbi->ipu, MEM_ROT_ENC_MEM, IPU_INPUT_BUFFER, mxc_fbi->cur_ipu_buf);
-	mxc_fbi->cur_ipu_buf = 1 - mxc_fbi->cur_ipu_buf;
-	ipu_select_buffer(mxc_fbi->ipu, MEM_ROT_ENC_MEM, IPU_OUTPUT_BUFFER, mxc_fbi->cur_ipu_buf);
-	complete(&mxc_fbi->flip_complete);
-	return IRQ_HANDLED;
-}
-
 /*
  * Suspends the framebuffer and blanks the screen. Power management support
  */
@@ -2969,44 +2837,7 @@ static int mxcfb_map_video_memory(struct fb_info *fbi)
 		(uint32_t) fbi->fix.smem_start, fbi->fix.smem_len);
 
 	fbi->screen_size = fbi->fix.smem_len;
-	if (mxc_fbi->ipu_ch == MEM_BG_SYNC
-	    && fbi->var.rotate > IPU_ROTATE_VERT_FLIP) {
-		if (fbi->var.rotate > IPU_ROTATE_180) {
-			mxc_fbi->bg_mem_len =
-				fbi->var.yres_virtual * fbi->fix.line_length;
-		} else {
-			mxc_fbi->bg_mem_len =
-				fbi->var.xres_virtual * fbi->fix.line_length;
-		}
 
-		mxc_fbi->bg_virt_addr0 = dma_alloc_writecombine(
-			fbi->device,
-			mxc_fbi->bg_mem_len,
-			&mxc_fbi->bg_phy_addr0,
-			GFP_DMA | GFP_KERNEL);
-		if (mxc_fbi->bg_virt_addr0 == 0) {
-			dev_err(fbi->device,
-				"Unable to allocate framebuffer memory\n");
-			return -EBUSY;
-		}
-		dev_dbg(fbi->device,
-			"allocated fb @ paddr=0x%08X, size=%d.\n",
-			mxc_fbi->bg_phy_addr0, mxc_fbi->bg_mem_len);
-
-		mxc_fbi->bg_virt_addr1 = dma_alloc_writecombine(
-			fbi->device,
-			mxc_fbi->bg_mem_len,
-			&mxc_fbi->bg_phy_addr1,
-			GFP_DMA | GFP_KERNEL);
-		if (mxc_fbi->bg_virt_addr1 == 0) {
-			dev_err(fbi->device,
-				"Unable to allocate framebuffer memory\n");
-			return -EBUSY;
-		}
-		dev_dbg(fbi->device,
-			"allocated fb @ paddr=0x%08X, size=%d.\n",
-			mxc_fbi->bg_phy_addr1, mxc_fbi->bg_mem_len);
-	}
 	/* Clear the screen */
 	memset((char *)fbi->screen_base, 0, fbi->fix.smem_len);
 
@@ -3022,20 +2853,6 @@ static int mxcfb_map_video_memory(struct fb_info *fbi)
  */
 static int mxcfb_unmap_video_memory(struct fb_info *fbi)
 {
-	struct mxcfb_info *mxcfbi = (struct mxcfb_info *)fbi->par;
-
-	if (mxcfbi->bg_virt_addr0) {
-		dma_free_writecombine(fbi->device,  mxcfbi->bg_mem_len, mxcfbi->bg_virt_addr0, mxcfbi->bg_phy_addr0);
-		mxcfbi->bg_virt_addr0 = 0;
-		mxcfbi->bg_phy_addr0 = 0;
-	}
-	if (mxcfbi->bg_virt_addr1) {
-		dma_free_writecombine(fbi->device,  mxcfbi->bg_mem_len, mxcfbi->bg_virt_addr1, mxcfbi->bg_phy_addr1);
-		mxcfbi->bg_virt_addr1 = 0;
-		mxcfbi->bg_phy_addr1 = 0;
-	}
-	mxcfbi->bg_mem_len = 0;
-
 	dma_free_writecombine(fbi->device, fbi->fix.smem_len,
 			      fbi->screen_base, fbi->fix.smem_start);
 	fbi->screen_base = 0;
@@ -3304,11 +3121,8 @@ static int mxcfb_option_setup(struct platform_device *pdev, struct fb_info *fbi)
 			fb_pix_fmt = bpp_to_pixfmt(pdata->default_bpp);
 			if (fb_pix_fmt)
 				pixfmt_to_var(fb_pix_fmt, &fbi->var);
-		} else if (!strncmp(opt, "rotate=", 7)) {
-			fbi->var.rotate = simple_strtoul(opt + 7, NULL, 0);
-		} else {
+		} else
 			fb_mode_str = opt;
-		}
 	}
 
 	if (fb_mode_str)
@@ -3635,7 +3449,6 @@ static int mxcfb_probe(struct platform_device *pdev)
 	struct mxcfb_info *mxcfbi;
 	struct resource *res;
 	int ret = 0;
-	int tmp;
 
 	dev_dbg(&pdev->dev, "%s enter\n", __func__);
 	pdev->id = of_alias_get_id(pdev->dev.of_node, "mxcfb");
@@ -3678,17 +3491,6 @@ static int mxcfb_probe(struct platform_device *pdev)
 	ret = mxcfb_dispdrv_init(pdev, fbi);
 	if (ret < 0)
 		goto init_dispdrv_failed;
-
-	if (fbi->var.rotate > IPU_ROTATE_180) {
-		if (fbi->var.xres > 1024 ||  fbi->var.yres > 1024)
-			dev_err(&pdev->dev, "Rotate resolution > 1024x1024 is not yet supported");
-		tmp = fbi->var.xres;
-		fbi->var.xres = fbi->var.yres;
-		fbi->var.yres = tmp;
-		tmp = fbi->var.xres_virtual;
-		fbi->var.xres_virtual = fbi->var.yres_virtual;
-		fbi->var.yres_virtual = tmp;
-	}
 
 	ret = ipu_test_set_usage(mxcfbi->ipu_id, mxcfbi->ipu_di);
 	if (ret < 0) {
