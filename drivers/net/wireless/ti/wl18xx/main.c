@@ -24,6 +24,7 @@
 #include <linux/ip.h>
 #include <linux/firmware.h>
 #include <linux/etherdevice.h>
+#include <linux/cpumask.h>
 
 #include "../wlcore/wlcore.h"
 #include "../wlcore/debug.h"
@@ -1351,18 +1352,46 @@ out:
 }
 
 #define WL18XX_CONF_FILE_NAME "ti-connectivity/wl18xx-conf.bin"
+#define WL1835_CONF_FILE_NAME "ti-connectivity/wl1835-conf.bin"
+#define WL1837_CONF_FILE_NAME "ti-connectivity/wl1837-conf.bin"
+
 static int wl18xx_conf_init(struct wl1271 *wl, struct device *dev)
 {
 	struct wl18xx_priv *priv = wl->priv;
 	struct wlcore_conf_file *conf_file;
 	const struct firmware *fw;
 	int ret;
+	unsigned int ncores = num_possible_cpus();
 
-	ret = request_firmware(&fw, WL18XX_CONF_FILE_NAME, dev);
-	if (ret < 0) {
-		wl1271_error("could not get configuration binary %s: %d",
-			     WL18XX_CONF_FILE_NAME, ret);
-		goto out_fallback;
+	if(ncores == 2)
+	{
+		ret = request_firmware(&fw, WL1837_CONF_FILE_NAME, dev);
+		if (ret < 0) {
+			wl1271_error("could not get configuration binary %s: %d",
+			     	WL1837_CONF_FILE_NAME, ret);
+			goto out_fallback;
+		}
+		printk("Loading WL1837-conf.bin\n");
+	}
+	else if(ncores == 4)
+	{
+		ret = request_firmware(&fw, WL1835_CONF_FILE_NAME, dev);
+		if (ret < 0) {
+			wl1271_error("could not get configuration binary %s: %d",
+			     	WL1835_CONF_FILE_NAME, ret);
+			goto out_fallback;
+		}
+		printk("Loading WL1835-conf.bin\n");
+	}
+	else
+	{
+		ret = request_firmware(&fw, WL18XX_CONF_FILE_NAME, dev);
+		if (ret < 0) {
+			wl1271_error("could not get configuration binary %s: %d",
+			     	WL18XX_CONF_FILE_NAME, ret);
+			goto out_fallback;
+		}
+		printk("Loading WL18XX-conf.bin\n");
 	}
 
 	if (fw->size != WL18XX_CONF_SIZE) {
