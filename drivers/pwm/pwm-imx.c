@@ -248,7 +248,11 @@ static int imx_pwm_config(struct pwm_chip *chip,
 
 static int imx_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
-	struct imx_chip *imx = to_imx_chip(chip);
+	if(block_backlight_change)
+	{
+		printk("block backlight change\n");
+		return 0;
+	}struct imx_chip *imx = to_imx_chip(chip);
 	int ret;
 
 	ret = clk_prepare_enable(imx->clk_per);
@@ -262,6 +266,11 @@ static int imx_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 
 static void imx_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
+	if(block_backlight_change)
+	{
+		printk("block backlight change\n");
+		return 0;
+	}
 	struct imx_chip *imx = to_imx_chip(chip);
 
 	imx->set_enable(chip, false);
