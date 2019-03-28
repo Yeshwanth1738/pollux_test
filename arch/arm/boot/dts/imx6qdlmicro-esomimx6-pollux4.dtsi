@@ -365,7 +365,9 @@
 
 		};
 	};
-#endif	
+#endif
+
+#if 0	/*removed audio codec in revB*/
 	sound {
                 compatible = "fsl,imx6q-esomimx6-wm8750",
                               "fsl,imx-audio-wm8750";
@@ -378,12 +380,13 @@
                 mux-int-port = <1>;
                 mux-ext-port = <3>;
        };
+#endif
 };
 
 &audmux {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_audmux>;
-	status = "okay";
+	status = "disabled";/*removed audio codec in revB*/
 };
 
 &cpu0 {
@@ -610,6 +613,7 @@
 		status = "okay";
 	};
 
+#if 0 /*removed audio codec in revB*/
 	codec: wm8750@1a {
 		compatible = "wlf,wm8750";
                 reg = <0x1a>;
@@ -620,6 +624,7 @@
                 HPVDD-supply = <&reg_3p3v>;
 		status = "okay";
 	};
+#endif
 };
 
 &i2c2 {
