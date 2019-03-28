@@ -770,18 +770,49 @@
         };
 };
 
-#if 0
+#if 1/*revB changes*/
 &i2c3 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 
+	adc: tla2024_adc@48 {
+
+	     compatible = "ti,tla2024";
+	     reg = <0x48>;
+	     status = "okay";
+
+	     #address-cells = <1>;
+	     #size-cells = <0>;
+
+	     channel@0 {
+		     reg = <0>;
+		     single-ended = <0>;
+	     };
+
+	     channel@1 {
+		     reg = <0>;
+		     single-ended = <1>;
+	     };
+
+	     channel@2 {
+		     reg = <0>;
+		     single-ended = <2>;
+	     };
+
+	     channel@3 {
+		     reg = <0>;
+		     single-ended = <3>;
+	     };
+
+     };
+#if 0
 	hdmi: edid@50 {
 		compatible = "fsl,imx6-hdmi-i2c";
 		reg = <0x50>;
 	};
-
+#endif
 
 };
 #endif
@@ -1064,7 +1095,7 @@
 				MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x1b0b0
 				MX6QDL_PAD_GPIO_16__GPIO7_IO11		0x1b0b0
                                 MX6QDL_PAD_EIM_DA4__GPIO3_IO04          0x1b0b0/*revb change leftkey*/
-                                MX6QDL_PAD_EIM_DA3__GPIO3_IO03          0x1b0b0/*revb change leftkey*/
+                                MX6QDL_PAD_EIM_DA3__GPIO3_IO03          0x1b0b0/*revb change rightkey*/
 				MX6QDL_PAD_CSI0_DAT5__GPIO5_IO23	0x1b0b0/*revb change enterkey*/
 				MX6QDL_PAD_KEY_ROW4__GPIO4_IO15		0x1b0b0
 				MX6QDL_PAD_KEY_COL4__GPIO4_IO14		0x1b0b0
