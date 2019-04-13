@@ -524,13 +524,17 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 	sensor->on = on;
 	if(on)
 	{		
+		gpio_set_value(clk_en_gpio, 1);
+		mdelay(10);
 		gpio_set_value(rst_gpio, 1);
-		udelay(10);	
+		mdelay(1);
 	}
 	else
 	{
 		gpio_set_value(rst_gpio, 0);
-		udelay(10);	
+		mdelay(1);
+		gpio_set_value(clk_en_gpio, 0);
+		mdelay(1);
 	}
 	printk("in %s\n",__func__);
 	return 0;
@@ -1004,7 +1008,7 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 
 	/*assertion of reset pin to 1*/
 	gpio_set_value(rst_gpio, 1);
-	udelay(10);
+	mdelay(1);
 
 	printk("in %s\n",__func__);
 	/* mclk */
@@ -1199,17 +1203,18 @@ static int py480_suspend(struct device *dev)
 	if(ret < 0)
 		return ret;
 
+	/*revB timing changes for powerup and powerdown sequence*/
 	/*assertion of reset pin to 0*/
 	gpio_set_value(rst_gpio, 0);
-	udelay(10);
+	mdelay(1);
 	gpio_set_value(clk_en_gpio, 0);
-	udelay(10);
+	mdelay(1);
 	gpio_set_value(pix_cam_en_gpio, 0);
-	udelay(10);
+	mdelay(1);
 	gpio_set_value(cam_pwr_en_gpio, 0);
-	udelay(10);
+	mdelay(1);
 	gpio_set_value(five_v_en_gpio, 0);
-	udelay(10);
+	mdelay(1);
 	printk(KERN_INFO"py480 suspending\n");
 	
 	return 0;
@@ -1231,20 +1236,20 @@ static int py480_sysfs_suspend(bool state)
 	u16 regval = 0;
 	u16 pllreg = 0;
 	enum py480_frame_rate frame_rate = py480_30_fps;
-
+	/*revB timing changes for powerup and powerdown sequence*/
 	if(state == 1)
 	{
 		/*assertion of reset pin to 0*/
 		gpio_set_value(rst_gpio, 0);
-		udelay(10);
+		mdelay(1);
 		gpio_set_value(clk_en_gpio, 0);
-		udelay(10);
+		mdelay(1);
 		gpio_set_value(pix_cam_en_gpio, 0);
-		udelay(10);
+		mdelay(1);
 		gpio_set_value(cam_pwr_en_gpio, 0);
-		udelay(10);
+		mdelay(1);
 		gpio_set_value(five_v_en_gpio, 0);
-		udelay(10);
+		mdelay(1);
 		printk(KERN_INFO"py480 suspending\n");
 	}
 	else if(state == 0)
@@ -1256,18 +1261,18 @@ static int py480_sysfs_suspend(bool state)
 		mdelay(1);
 		/*camera power*/
 		gpio_set_value(cam_pwr_en_gpio, 1);
-		udelay(10);
+		mdelay(1);
 		/*pix clk*/
 		gpio_set_value(pix_cam_en_gpio, 1);
-		udelay(10);
+		mdelay(1);
+#if 0/*settings will be written by application when openening the camera node*/
 		/*enable */
 		gpio_set_value(clk_en_gpio, 1);
-		mdelay(2);
+		mdelay(10);
 		/*assertion of reset pin to 1*/
 		gpio_set_value(rst_gpio, 1);
-		udelay(10);
+		mdelay(1);
 		printk(KERN_INFO"py480 resuming\n");
-#if 1
  
 		ret = py480_init_mode();
 		if(ret < 0)
@@ -1312,23 +1317,24 @@ static int py480_resume(struct device *dev)
 	int ret,retries=0;
 	u16 regval = 0;
 	u16 pllreg = 24;
+	/*revB timing changes for powerup and powerdown sequence*/
 	/*5v gpio*/
 	gpio_set_value(five_v_en_gpio, 1);
 	mdelay(1);
 	/*camera power*/
 	gpio_set_value(cam_pwr_en_gpio, 1);
-	udelay(10);
+	mdelay(1);
 	/*pix clk*/
 	gpio_set_value(pix_cam_en_gpio, 1);
-	udelay(10);
+	mdelay(1);
+#if 0/*camera handle will be closed by application when entering into charging*/
 	/*enable */
 	gpio_set_value(clk_en_gpio, 1);
-	mdelay(2);
+	mdelay(10);
 	/*assertion of reset pin to 1*/
 	gpio_set_value(rst_gpio, 1);
-	udelay(10);
+	mdelay(1);
 	printk(KERN_INFO"py480 resuming\n");
-#if 1 
 	ret = py480_init_mode();
 	if(ret < 0)
 		return ret;
@@ -1533,11 +1539,11 @@ static int py480_probe(struct spi_device *spi)
 		return retval;
 	}
 	py480_regulator_enable();
-	udelay(20);
+	mdelay(1);
 	py480_regulator_enable_pix();
-	udelay(20);
+	mdelay(1);
 	py480_regulator_enable_clk();
-	mdelay(2);
+	mdelay(10);
 	
 	clk_prepare_enable(py480_data->sensor_clk);
 
@@ -1552,7 +1558,7 @@ static int py480_probe(struct spi_device *spi)
 	py480_data->streamcap.timeperframe.numerator = 1;
 
 	py480_reset();
-	udelay(10);
+	mdelay(1);
 
 	if (py480_data->spi && bus_width == 26) {
 		py480_data->spi->bits_per_word = 26;

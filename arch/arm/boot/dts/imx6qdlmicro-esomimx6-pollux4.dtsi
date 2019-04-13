@@ -451,19 +451,22 @@
 		interrupt-parent = <&gpio4>;
 		interrupts = <28 IRQ_TYPE_LEVEL_HIGH>;
 	        pendown-gpio = <&gpio4 28 0>;
-		//ti,keep-vref-on;//without working
+		ti,keep-vref-on;//without working
 		/* driver defaults */
 #if 1
 		ti,x-min = /bits/ 16 <0>;
 		ti,y-min = /bits/ 16 <0>;
 		ti,x-max = /bits/ 16 <4095>;
 		ti,y-max = /bits/ 16 <3930>;
-		//ti,vref-delay-usecs = /bits/ 16 <100>;
+		ti,vref-delay-usecs = /bits/ 16 <100>;
+		//ti,pendown-gpio-debounce = /bits/ 16 <2>;
 		ti,pressure-min = /bits/ 16 <0>;
 		ti,pressure-max = /bits/ 16 <65535>;
-		ti,x-plate-ohms = /bits/ 16 <400>;
-		ti,debounce-max = /bits/ 16 <30>;//2
-		ti,debounce-tol = /bits/ 16 <10>;//4 
+		ti,x-plate-ohms = /bits/ 16 <263>;
+		ti,settle-delay-usec = /bits/ 16 <150>;
+		ti,penirq-recheck-delay-usecs = /bits/ 16 <100>;
+		ti,debounce-max = /bits/ 16 <30>;
+		ti,debounce-tol = /bits/ 16 <10>;
 		ti,debounce-rep = /bits/ 16 <1>;  
 
 #endif

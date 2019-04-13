@@ -964,16 +964,16 @@ static int se2100_suspend(struct device *dev)
 {
 	int retval = 0;
 	//printk(KERN_INFO"suspendinggggg\n");
+	/*revB timing changes for powerdown sequence*/
 	gpio_set_value(pwdn_gpio,0);
-	udelay(10);
+	mdelay(1);
 	retval = se2100_write_reg(0x09, 0x81);  //enabling suspend mode
-	udelay(10);
+	mdelay(10);
 	gpio_set_value(pwdn_gpio,1);
-	udelay(10);
+	mdelay(1);
 	gpio_set_value(mclk_en_gpio,0);
-	udelay(10);
+	mdelay(1);
 	gpio_set_value(pwr_en_gpio,0);
-	udelay(10);
 	//return retval;
 	return 0;
 
@@ -982,13 +982,14 @@ static int se2100_suspend(struct device *dev)
 static int se2100_resume(struct device *dev)
 {
 	int ret=0;
+	/*revB timing changes for powerup sequence*/
 	/*reload all registers*/
 	gpio_set_value(pwr_en_gpio,1);
 	udelay(10);
 	gpio_set_value(mclk_en_gpio,1);
-	udelay(110);
+	mdelay(10);
 	gpio_set_value(pwdn_gpio,0);
-	udelay(10);
+	mdelay(2);
 	reset_regs();
 	ret=barcode_resume();
 	//return ret;
@@ -1078,7 +1079,7 @@ static int se2100_probe(struct i2c_client *client, const struct i2c_device_id *d
 	udelay(10);
 	gpio_set_value(mclk_en_gpio,1);
 	clk_prepare_enable(se2100_data.sensor_clk);
-	udelay(110);
+	mdelay(10);
 	se2100_data.i2c_client = client;
 	se2100_data.pix.pixelformat = V4L2_PIX_FMT_UYVY;
     	se2100_data.pix.width = 640;
@@ -1091,12 +1092,12 @@ static int se2100_probe(struct i2c_client *client, const struct i2c_device_id *d
     	se2100_data.streamcap.timeperframe.numerator = 1;
 
 	gpio_set_value(pwdn_gpio,0);
-	msleep(1);
+	msleep(2);
 
 	reset_regs();
-	printk("Camera-se2100 register loading started\n");
+	//printk("Camera-se2100 register loading started\n");
 	retval = barcode_resume();//zebra changes 
-	printk("Camera-se2100 register loading finished\n");
+	//printk("Camera-se2100 register loading finished\n");
 	msleep(5);
 
 	clk_disable_unprepare(se2100_data.sensor_clk);
