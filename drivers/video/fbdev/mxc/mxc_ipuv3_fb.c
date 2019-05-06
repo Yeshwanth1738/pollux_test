@@ -3532,7 +3532,7 @@ static int mxcfb_probe(struct platform_device *pdev)
 			goto mxcfb_register_failed;
 
 		ipu_disp_set_global_alpha(mxcfbi->ipu, mxcfbi->ipu_ch,
-					  true, 0x80);
+					  true, 0xff);
 		ipu_disp_set_color_key(mxcfbi->ipu, mxcfbi->ipu_ch, false, 0);
 
 		res = platform_get_resource(pdev, IORESOURCE_MEM, 1);

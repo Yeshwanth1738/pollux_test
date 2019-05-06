@@ -35,6 +35,7 @@
 
 #define SOM_PWR_LED1 29
 #define SOM_PWR_LED2 30
+#define DEEPSLEEP_INT_GPIO 146
 
 const char *pm_labels[] = { "mem", "standby", "freeze", NULL };
 const char *pm_states[PM_SUSPEND_MAX];
@@ -360,6 +361,7 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 	arch_suspend_disable_irqs();
 	BUG_ON(!irqs_disabled());
 
+
 	error = syscore_suspend();
 	if (!error) {
 		*wakeup = pm_wakeup_pending();
@@ -426,6 +428,9 @@ int suspend_devices_and_enter(suspend_state_t state)
     gpio_request(SOM_PWR_LED2, "D5");
     gpio_direction_output(SOM_PWR_LED1, 1);
     gpio_direction_output(SOM_PWR_LED2, 1);
+    /*Imx6 deep sleep intimation to MCU*/
+    gpio_request(DEEPSLEEP_INT_GPIO, "MCU_GPIO3");
+    gpio_direction_output(DEEPSLEEP_INT_GPIO, 1);
     /************End************/
 
 	if (suspend_test(TEST_DEVICES))
@@ -447,6 +452,9 @@ int suspend_devices_and_enter(suspend_state_t state)
     gpio_direction_output(SOM_PWR_LED1, 0);
     gpio_direction_output(SOM_PWR_LED2, 0);
     gpio_free(SOM_PWR_LED1);
+    gpio_free(SOM_PWR_LED2);
+    /*Imx6 deep sleep intimation to MCU*/
+    gpio_direction_output(DEEPSLEEP_INT_GPIO, 0);
     gpio_free(SOM_PWR_LED2);
     /************End************/
 

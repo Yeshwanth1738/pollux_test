@@ -383,11 +383,13 @@
 #endif
 };
 
+#if 0
 &audmux {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_audmux>;
 	status = "disabled";/*removed audio codec in revB*/
 };
+#endif
 
 &cpu0 {
 	arm-supply = <&sw1a_reg>;
@@ -870,7 +872,7 @@
 
 			>;
 		};
-
+#if 0
 		pinctrl_audmux: audmuxgrp {
 			fsl,pins = <
 				MX6QDL_PAD_CSI0_DAT7__AUD3_RXD		0x130b0
@@ -885,7 +887,7 @@
 				MX6QDL_PAD_KEY_ROW1__AUD5_RXD     0x130b0
 			>;
 		};
-
+#endif	
 		pinctrl_wdog1: wdog {
 			fsl,pins = <
 			//	MX6QDL_PAD_EIM_DA5__GPIO3_IO05          0x0001B0B0
@@ -1075,8 +1077,8 @@
 				   MX6QDL_PAD_EIM_A19__IPU2_CSI1_DATA14    0x0001B0B0 
 				   MX6QDL_PAD_EIM_A18__IPU2_CSI1_DATA13    0x0001B0B0 
 				   MX6QDL_PAD_EIM_A17__IPU2_CSI1_DATA12    0x0001B0B0 
-				   MX6QDL_PAD_EIM_EB0__IPU2_CSI1_DATA11    0x0001B0B0
-				   MX6QDL_PAD_EIM_EB1__IPU2_CSI1_DATA10    0x0001B0B0
+				 //  MX6QDL_PAD_EIM_EB0__IPU2_CSI1_DATA11    0x0001B0B0//revb changes
+				 //  MX6QDL_PAD_EIM_EB1__IPU2_CSI1_DATA10    0x0001B0B0//revb changes
 
 			/*removed in revb design*/
 			/*	   MX6QDL_PAD_EIM_DA0__IPU2_CSI1_DATA09    0x0001B0B0
@@ -1107,7 +1109,21 @@
 				MX6QDL_PAD_CSI0_DAT5__GPIO5_IO23	0x1b0b0/*revb change enterkey*/
 				MX6QDL_PAD_KEY_ROW4__GPIO4_IO15		0x1b0b0
 				MX6QDL_PAD_KEY_COL4__GPIO4_IO14		0x1b0b0
-				MX6QDL_PAD_CSI0_MCLK__GPIO5_IO19	0x1b0b0 
+				MX6QDL_PAD_CSI0_MCLK__GPIO5_IO19	0x1b0b0/*SOM MCU gpio2*/
+
+				/*User space GPIO's*/
+				MX6QDL_PAD_EIM_DA1__GPIO3_IO01    0x0001B0B0/*som dc_detect gpio*/
+				MX6QDL_PAD_EIM_DA0__GPIO3_IO00    0x0001B0B0/*battery status2 gpio*/
+				MX6QDL_PAD_EIM_DA8__GPIO3_IO08    0x0001B0B0/*low battery status gpio*/
+				MX6QDL_PAD_EIM_DA2__GPIO3_IO02    0x0001B0B0/*SOM_MCU gpio5*/
+				MX6QDL_PAD_EIM_DA5__GPIO3_IO05    0x0001B0B0/*SOM_MCU gpio4*/
+				MX6QDL_PAD_CSI0_DAT6__GPIO5_IO24    0x0001B0B0/*SOM_MCU gpio6*/
+				MX6QDL_PAD_CSI0_PIXCLK__GPIO5_IO18    0x0001B0B0/*SOM_MCU gpio3*/
+				MX6QDL_PAD_CSI0_VSYNC__GPIO5_IO21    0x0001B0B0/*SOM MCU gpio1*/
+				MX6QDL_PAD_GPIO_3__GPIO1_IO03    0x0001B0B0/*Barcode LED gpio*/
+				MX6QDL_PAD_DISP0_DAT16__GPIO5_IO10    0x0001B0B0/*RFID enable gpio*/
+				MX6QDL_PAD_CSI0_DAT17__GPIO6_IO03    0x0001B0B0/*watchdog MCU toggle gpio*/
+				MX6QDL_PAD_DISP0_DAT11__GPIO5_IO05    0x0001B0B0/*battery status1 gpio*/
 			>;
 		};
 	

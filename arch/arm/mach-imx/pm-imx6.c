@@ -696,7 +696,6 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 
 static int imx6q_suspend_finish(unsigned long val)
 {
-	static unsigned int deep_sleep_gpio;
 	if (!imx6_suspend_in_ocram_fn) {
 		cpu_do_idle();
 	} else {
@@ -705,9 +704,6 @@ static int imx6q_suspend_finish(unsigned long val)
 		 * as we need to float DDR IO.
 		 */
 		local_flush_tlb_all();
-		/*Imx6 deep sleep intimation to MCU*/
-		deep_sleep_gpio = readl_relaxed(0x20ac000);
-		writel_relaxed(deep_sleep_gpio | 0x40000,0x20ac000);
 
 		imx6_suspend_in_ocram_fn(suspend_ocram_base);
 	}
