@@ -590,7 +590,7 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 	tgt_xclk = max(tgt_xclk, (u32)se2100_XCLK_MIN);
 	se2100_data.mclk = tgt_xclk;
 	pr_debug("Setting mclk to %d MHz\n", tgt_xclk / 1000000);
-	clk_set_rate(se2100_data.sensor_clk, se2100_data.mclk);
+//	clk_set_rate(se2100_data.sensor_clk, se2100_data.mclk);
 
 	mipi_csi2_info = mipi_csi2_get_info();
 
@@ -1031,13 +1031,13 @@ static int se2100_probe(struct i2c_client *client, const struct i2c_device_id *d
 	retval = devm_gpio_request_one(dev, pwr_en_gpio, GPIOF_OUT_INIT_HIGH,
 					"se2100_2p8");
 #endif
-	se2100_data.sensor_clk = devm_clk_get(dev, "csi_mclk");
-	if (IS_ERR(se2100_data.sensor_clk)) {
-		/* assuming clock enabled by default */
-		se2100_data.sensor_clk = NULL;
-		dev_err(dev, "clock-frequency missing or invalid\n");
-		return PTR_ERR(se2100_data.sensor_clk);
-	}
+//	se2100_data.sensor_clk = devm_clk_get(dev, "csi_mclk");
+//	if (IS_ERR(se2100_data.sensor_clk)) {
+//		/* assuming clock enabled by default */
+//		se2100_data.sensor_clk = NULL;
+//		dev_err(dev, "clock-frequency missing or invalid\n");
+//		return PTR_ERR(se2100_data.sensor_clk);
+//	}
 
 	retval = of_property_read_u32(dev->of_node, "mclk",
 			&(se2100_data.mclk));
@@ -1078,7 +1078,7 @@ static int se2100_probe(struct i2c_client *client, const struct i2c_device_id *d
 	gpio_set_value(pwr_en_gpio,1);
 	udelay(10);
 	gpio_set_value(mclk_en_gpio,1);
-	clk_prepare_enable(se2100_data.sensor_clk);
+//	clk_prepare_enable(se2100_data.sensor_clk);
 	mdelay(10);
 	se2100_data.i2c_client = client;
 	se2100_data.pix.pixelformat = V4L2_PIX_FMT_UYVY;
@@ -1100,7 +1100,7 @@ static int se2100_probe(struct i2c_client *client, const struct i2c_device_id *d
 	//printk("Camera-se2100 register loading finished\n");
 	msleep(5);
 
-	clk_disable_unprepare(se2100_data.sensor_clk);
+//	clk_disable_unprepare(se2100_data.sensor_clk);
 	se2100_int_device.priv = &se2100_data;
 	retval = v4l2_int_device_register(&se2100_int_device);
 	printk("Camera-se2100 MIPI Interface is found\n");
